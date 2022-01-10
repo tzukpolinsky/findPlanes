@@ -23,7 +23,8 @@ class Auxiliary {
 public:
     static Point GetCenterOfMass(const std::vector<Point> &points);
 
-    static std::string GetGeneralSettingsPath();
+    static std::string GetDataSetsDirPath();
+
 
     static double det(const Point &point1, const Point &point2);
 

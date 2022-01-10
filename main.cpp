@@ -123,17 +123,19 @@ std::vector<Point> getPointsFromXYZFile(const std::string &fileName) {
 }
 
 int main() {
-    auto points = getPointsFromFile("/home/tzuk/Documents/AutonomousDroneResults/27_12_21_14_21/pointData2.csv");
+    std::string datasetFilePath = Auxiliary::GetDataSetsDirPath() + "buildings/pointData1.csv";
+    std::cout << "dataset file path" << datasetFilePath << std::endl;
+    auto points = getPointsFromFile(datasetFilePath);
     auto[R, T] = align_map(points);
     auto start = std::chrono::high_resolution_clock::now();
 
     Navigation navigation;
-    std::vector<Point> track{Point(0, 0, -0.05), Point(0.3, 0.1, -0.1)};
-    Point currentPosition(0, 0, 0);
+    //std::vector<Point> track{Point(0, 0, -0.05), Point(0.3, 0.1, -0.1)};
+    //Point currentPosition(0, 0, 0);
     //navigation.objectDetection(points, track, currentPosition);
 
     navigation.getFloor(points, points.size() / 100);
     auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
     std::cout << duration.count() << std::endl;
 }

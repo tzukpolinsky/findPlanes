@@ -284,7 +284,13 @@ long Auxiliary::myGcd(long a, long b) {
     else
         return myGcd(b, a % b);
 }
-
+std::string Auxiliary::GetDataSetsDirPath() {
+    char currentDirPath[256];
+    getcwd(currentDirPath, 256);
+    std::string settingPath = currentDirPath;
+    settingPath += "/../datasets/";
+    return settingPath;
+}
 
 double Auxiliary::calculateMeanOfDistanceDifferences(std::vector<double> distances) {
     double sumOfDistances = 0.0;
