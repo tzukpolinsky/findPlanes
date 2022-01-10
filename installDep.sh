@@ -18,6 +18,7 @@ sudo apt-get install libboost-all-dev libopenblas-dev
 sudo apt-get install libbluetooth-dev
 
 cd ../../Pangolin
+rm -rf build
 mkdir build
 cd build
 cmake -DCPP11_NO_BOOST=1 -DEigen3_INCLUDE_DIR=/usr/local/include/eigen3 ..
