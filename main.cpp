@@ -9,6 +9,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core.hpp>
 #include <iostream>
+#include <cnpy.h>
 
 cv::Mat points3d_to_mat(const std::vector<cv::Point3d> &points3d) {
     std::size_t nPoints = points3d.size();
@@ -104,6 +105,12 @@ std::vector<Point> getPointsFromFile(const std::string &fileName) {
 
 }
 
+std::vector<Point> getPointsFromPYZFile(const std::string &fileName) {
+    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
+    auto points = npPointsMap["points"];
+    std::cout << "loading " << std::endl;
+}
+
 std::vector<Point> getPointsFromXYZFile(const std::string &fileName) {
     std::ifstream myFile(fileName);
     std::string line;
@@ -123,9 +130,10 @@ std::vector<Point> getPointsFromXYZFile(const std::string &fileName) {
 }
 
 int main() {
-    std::string datasetFilePath = Auxiliary::GetDataSetsDirPath() + "buildings/pointData1.csv";
+    std::string datasetFilePath =
+            Auxiliary::GetDataSetsDirPath() + "cars/20180807145028_lidar_frontcenter_000000091.npz";
     std::cout << "dataset file path" << datasetFilePath << std::endl;
-    auto points = getPointsFromFile(datasetFilePath);
+    auto points = getPointsFromPYZFile(datasetFilePath);
     auto[R, T] = align_map(points);
     auto start = std::chrono::high_resolution_clock::now();
 
