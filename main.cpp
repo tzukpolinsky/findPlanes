@@ -107,8 +107,13 @@ std::vector<Point> getPointsFromFile(const std::string &fileName) {
 
 std::vector<Point> getPointsFromPYZFile(const std::string &fileName) {
     std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
-    auto points = npPointsMap["points"];
-    std::cout << "loading " << std::endl;
+    auto numPyPoints = npPointsMap["points"].as_vec<double>();
+    std::vector<Point> points;
+    for (int i = 0; i < numPyPoints.size(); i += 3) {
+        points.emplace_back(Point(numPyPoints[i], numPyPoints[i + 1], numPyPoints[i + 2]));
+    }
+
+    return points;
 }
 
 std::vector<Point> getPointsFromXYZFile(const std::string &fileName) {
@@ -134,7 +139,7 @@ int main() {
             Auxiliary::GetDataSetsDirPath() + "cars/20180807145028_lidar_frontcenter_000000091.npz";
     std::cout << "dataset file path" << datasetFilePath << std::endl;
     auto points = getPointsFromPYZFile(datasetFilePath);
-    auto[R, T] = align_map(points);
+    //auto[R, T] = align_map(points);
     auto start = std::chrono::high_resolution_clock::now();
 
     Navigation navigation;

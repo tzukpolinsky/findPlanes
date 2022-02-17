@@ -116,7 +116,7 @@ void Auxiliary::DrawMapPointsPangolin(const std::vector<Point> &cloud, const std
         glColor3f(0.0, 0.0, 1.0);
 
         for (const auto &point: cloud) {
-            glVertex3f(point.x, -1 * point.z, point.y);
+            glVertex3f(point.x, point.y, point.z);
         }
         glEnd();
 
@@ -124,14 +124,8 @@ void Auxiliary::DrawMapPointsPangolin(const std::vector<Point> &cloud, const std
         glBegin(GL_POINTS);
         glColor3f(1.0, 0.0, 0.0);
         for (const auto &point: redPoints) {
-            glVertex3f(point.x, -1 * point.z, point.y);
+            glVertex3f(point.x, point.y, point.z);
         }
-        glEnd();
-        glLineWidth(3);
-        glColor3f(1.0f, 0.0f, 1.0f);
-        glBegin(GL_LINES);
-        glVertex3f(0, 0, 0);
-        glVertex3f(lineFromCenter.x, -1 * lineFromCenter.z, lineFromCenter.y);
         glEnd();
 
         // Swap frames and Process Events
