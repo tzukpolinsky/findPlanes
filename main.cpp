@@ -140,6 +140,7 @@ int main() {
     std::cout << "dataset file path" << datasetFilePath << std::endl;
     auto points = getPointsFromPYZFile(datasetFilePath);
     //auto[R, T] = align_map(points);
+    std::cout << "amount of points: " << points.size() << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
 
     Navigation navigation;
@@ -147,8 +148,8 @@ int main() {
     //Point currentPosition(0, 0, 0);
     //navigation.objectDetection(points, track, currentPosition);
 
-    navigation.getFloor(points, points.size() / 100);
+    navigation.getFloor(points, points.size() / 100, true);
     auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     std::cout << duration.count() << std::endl;
 }

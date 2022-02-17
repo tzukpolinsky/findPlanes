@@ -83,9 +83,9 @@ Navigation::objectDetection(std::vector<Point> &points, std::vector<Point> &trac
     return {};
 }
 
-std::vector<Point> Navigation::getFloor(std::vector<Point> &points, unsigned long sizeOfJump) {
+std::vector<Point> Navigation::getFloor(std::vector<Point> &points, unsigned long sizeOfJump,bool isDebug) {
     std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
-        return point1.z > point2.z;
+        return point1.z < point2.z;
     });
 
     //Auxiliary::exportToXYZFile(points,
@@ -116,9 +116,11 @@ std::vector<Point> Navigation::getFloor(std::vector<Point> &points, unsigned lon
     /*Auxiliary::exportToXYZFile(weightedPoints.front().second,
                                "/home/tzuk/Documents/AutonomousDroneResults/varianceFilter/floor.xyz");
     Auxiliary::showGraph(pointsSizes, variances, "ro");*/
-    Auxiliary::showGraph(pointsSizes, variances, "ro");
-    Auxiliary::SetupPangolin("floor");
-    Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor");
+    if(isDebug){
+        Auxiliary::showGraph(pointsSizes, variances, "ro");
+        Auxiliary::SetupPangolin("floor");
+        Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor");
+    }
     return weightedPoints.front().second;
 }
 
