@@ -159,8 +159,6 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
 }
 
 int main() {
-    std::string dataBasePath = "/home/tzuk/Documents/carsDatasets/camera_lidar_semantic";
-    return loopThroughCarsDataBase(dataBasePath);
     std::string datasetFilePath =
             Auxiliary::GetDataSetsDirPath() + "cars/20180807145028_lidar_frontcenter_000000091.npz";
     std::cout << "dataset file path" << datasetFilePath << std::endl;
