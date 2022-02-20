@@ -10,6 +10,7 @@
 #include <opencv2/core.hpp>
 #include <iostream>
 #include <cnpy.h>
+#include <filesystem>
 
 cv::Mat points3d_to_mat(const std::vector<cv::Point3d> &points3d) {
     std::size_t nPoints = points3d.size();
@@ -134,7 +135,32 @@ std::vector<Point> getPointsFromXYZFile(const std::string &fileName) {
 
 }
 
+int loopThroughCarsDataBase(std::string &dataBasePath) {
+    Navigation navigation;
+    for (auto &dir: std::filesystem::directory_iterator(dataBasePath)) {
+        if (std::filesystem::is_directory(dir.path().string() + "/lidar")) {
+            for (auto &database: std::filesystem::directory_iterator(dir.path().string() + "/lidar")) {
+                for (auto &npzFile: std::filesystem::directory_iterator(database)) {
+                    std::string fileName = npzFile.path().filename().string();
+                    auto points = getPointsFromPYZFile(npzFile.path().string());
+                    std::cout << "amount of points: " << points.size() << " for file: " << fileName
+                              << std::endl;
+                    auto start = std::chrono::high_resolution_clock::now();
+                    navigation.getFloor(points, points.size() / 100, true, fileName);
+                    auto stop = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+                    std::cout << "for file: " << fileName << "time : " << duration.count() << std::endl;
+                }
+            }
+        }
+
+    }
+    return 1;
+}
+
 int main() {
+    std::string dataBasePath = "/home/tzuk/Documents/carsDatasets/camera_lidar_semantic";
+    return loopThroughCarsDataBase(dataBasePath);
     std::string datasetFilePath =
             Auxiliary::GetDataSetsDirPath() + "cars/20180807145028_lidar_frontcenter_000000091.npz";
     std::cout << "dataset file path" << datasetFilePath << std::endl;

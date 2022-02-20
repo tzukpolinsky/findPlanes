@@ -14,7 +14,7 @@
 class Navigation {
 public:
 
-    std::vector<Point> getFloor(std::vector<Point> &points, unsigned long sizeOfJump,bool isDebug = false);
+    std::vector<Point> getFloor(std::vector<Point> &points, unsigned long sizeOfJump,bool isDebug = false,std::string &pangolinPostfix = (std::string &) "");
 
     std::vector<bool>
     objectDetection(std::vector<Point> &points, std::vector<Point> &track, Point &currentPosition);
