@@ -29,7 +29,7 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
                     std::cout << "amount of points: " << points.size() << " for file: " << fileName
                               << std::endl;
                     auto start = std::chrono::high_resolution_clock::now();
-                    navigation.getFloor(points, points.size() / 100, true, fileName);
+                    navigation.getFloorFromLidar(points, points.size() / 100, true, fileName);
                     auto stop = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
                     std::cout << "for file: " << fileName << "time : " << duration.count() << std::endl;

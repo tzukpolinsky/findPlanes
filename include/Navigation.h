@@ -11,11 +11,15 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+
 class Navigation {
 public:
 
-    std::vector<Point> getFloor(std::vector<Point> &points, unsigned long sizeOfJump,bool isDebug = false,std::string &pangolinPostfix = (std::string &) "");
+    std::vector<Point> getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
+                                         std::string pangolinPostfix = "");
 
+    std::vector<Point> getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
+                                         std::string pangolinPostfix = "");
     std::vector<bool>
     objectDetection(std::vector<Point> &points, std::vector<Point> &track, Point &currentPosition);
 

@@ -146,7 +146,7 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
                     std::cout << "amount of points: " << points.size() << " for file: " << fileName
                               << std::endl;
                     auto start = std::chrono::high_resolution_clock::now();
-                    navigation.getFloor(points, points.size() / 100, true, fileName);
+                    navigation.getFloorFromLidar(points, points.size() / 100, true, fileName);
                     auto stop = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
                     std::cout << "for file: " << fileName << "time : " << duration.count() << std::endl;
@@ -160,10 +160,11 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
 
 int main() {
     std::string datasetFilePath =
-            Auxiliary::GetDataSetsDirPath() + "cars/20180807145028_lidar_frontcenter_000000091.npz";
+            Auxiliary::GetDataSetsDirPath() + "buildings/pointData1.csv";
     std::cout << "dataset file path" << datasetFilePath << std::endl;
-    auto points = getPointsFromPYZFile(datasetFilePath);
-    //auto[R, T] = align_map(points);
+    //auto points = getPointsFromPYZFile(datasetFilePath);
+    auto points = getPointsFromFile(datasetFilePath);
+    auto[R, T] = align_map(points);
     std::cout << "amount of points: " << points.size() << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -172,7 +173,7 @@ int main() {
     //Point currentPosition(0, 0, 0);
     //navigation.objectDetection(points, track, currentPosition);
 
-    navigation.getFloor(points, points.size() / 100, true);
+    navigation.getFloorFromOrbSlam(points, points.size() / 100, true);
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     std::cout << duration.count() << std::endl;
