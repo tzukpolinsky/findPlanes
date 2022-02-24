@@ -18,8 +18,13 @@ public:
     std::vector<Point> getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
                                          std::string pangolinPostfix = "");
 
-    std::vector<Point> getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
-                                         std::string pangolinPostfix = "");
+    std::vector<Point> getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump,
+                                            bool isDebug = false, std::string pangolinPostfix = "");
+
+    std::vector<Point>
+    getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
+                        std::string pangolinPostfix = "");
+
     std::vector<bool>
     objectDetection(std::vector<Point> &points, std::vector<Point> &track, Point &currentPosition);
 

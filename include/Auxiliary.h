@@ -17,6 +17,7 @@
 
 #include <pangolin/scene/axis.h>
 #include <pangolin/scene/scenehandler.h>
+#include <opencv2/core/mat.hpp>
 
 //#endif
 class Auxiliary {
@@ -90,6 +91,8 @@ public:
                                       const std::string &windowName, const Point &lineFromCenter = Point());
 
     static void SetupPangolin(const std::string &window_name);
+
+    static cv::Mat getCovarianceMat(std::vector<double> & x,std::vector<double> &y);
 };
 
 

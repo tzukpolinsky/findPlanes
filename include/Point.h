@@ -23,8 +23,7 @@ public:
      * q* is quaternion
      *
      * */
-    Point(double x, double y, double z, double qx = 0, double qy = 0, double qz = 0, double qw = 0, int frameId = -1,
-          int label = -1);
+    Point(double x, double y, double z, int lidarId = -1);
 
     bool operator==(const Point &ref) const {
         return this->x == ref.x && this->y == ref.y && this->z == ref.z;
@@ -33,7 +32,7 @@ public:
 
     [[nodiscard]] std::string to_string() const {
         std::ostringstream ss;
-        ss << this->x << "," << this->y << "," << this->z << "," << this->label;
+        ss << this->x << "," << this->y << "," << this->z << "," << this->lidarId;
         return ss.str();
     }
 
@@ -42,12 +41,7 @@ public:
     double x;
     double y;
     double z;
-    double qx;
-    double qy;
-    double qz;
-    double qw;
-    int label;
-    int frameId;
+    int lidarId;
 };
 
 

@@ -3,6 +3,7 @@
 //
 
 #include <fstream>
+#include <opencv2/core/mat.hpp>
 #include "../include/Auxiliary.h"
 
 Point Auxiliary::GetCenterOfMass(const std::vector<Point> &points) {
@@ -15,7 +16,7 @@ Point Auxiliary::GetCenterOfMass(const std::vector<Point> &points) {
         z += point.z;
     }
     int size = points.size();
-    return {x / size, y / size, z / size, 0, 0, 0, 0};
+    return {x / size, y / size, z / size, -1};
 }
 
 double Auxiliary::det(const Point &point1, const Point &point2) {
@@ -111,15 +112,36 @@ void Auxiliary::DrawMapPointsPangolin(const std::vector<Point> &cloud, const std
     while (!pangolin::ShouldQuit()) {
         // Clear screen and activate view to render into
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glPointSize(1);
-        glBegin(GL_POINTS);
-        glColor3f(0.0, 0.0, 1.0);
 
         for (const auto &point: cloud) {
-            glVertex3f(point.x, point.y, point.z);
-        }
-        glEnd();
+            glPointSize(1);
+            glBegin(GL_POINTS);
+            switch (point.lidarId) {
+                case 0:
+                    glColor3f(1.0, 0.0, 1.0);
+                    break;
+                case 1:
 
+                    glColor3f(0.0, 0.0, 1.0);
+                    break;
+                case 2:
+
+                    glColor3f(0.0, 1.0, 0.0);
+                    break;
+                case 3:
+
+                    glColor3f(1.0, 1.0, 1.0);
+                    break;
+                case 4:
+
+                    glColor3f(0.0, 1.0, 1.0);
+                    break;
+            }
+            glVertex3f(point.x, point.y, point.z);
+
+
+            glEnd();
+        }
         glPointSize(10);
         glBegin(GL_POINTS);
         glColor3f(1.0, 0.0, 0.0);
@@ -127,7 +149,7 @@ void Auxiliary::DrawMapPointsPangolin(const std::vector<Point> &cloud, const std
             glVertex3f(point.x, point.y, point.z);
         }
         glEnd();
-
+        //pangolin::process::Mouse()
         // Swap frames and Process Events
         pangolin::FinishFrame();
     }
@@ -278,6 +300,7 @@ long Auxiliary::myGcd(long a, long b) {
     else
         return myGcd(b, a % b);
 }
+
 std::string Auxiliary::GetDataSetsDirPath() {
     char currentDirPath[256];
     getcwd(currentDirPath, 256);
@@ -292,6 +315,24 @@ double Auxiliary::calculateMeanOfDistanceDifferences(std::vector<double> distanc
         sumOfDistances += std::abs(distances[i] - distances[i + 1]);
     }
     return sumOfDistances / (distances.size() - 1);
+}
+
+cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> &y) {
+    cv::Mat aux(x.size(), 2, CV_64F);
+    double xMean = 0.0;
+    double yMean = 0.0;
+    for (int i = 0; i < x.size(); ++i) {
+        xMean += x[i];
+        yMean += y[i];
+    }
+    yMean /= x.size();
+    xMean /= x.size();
+    for (int i = 0; i < x.size(); ++i) {
+        aux.at<double>(i, 0) = x[i] - xMean;
+        aux.at<double>(i, 1) = y[i] - yMean;
+    }
+    cv::Mat cov = aux.t() * aux;
+    return cov;
 }
 
 double Auxiliary::calculateVariance(const std::vector<double> &distances) {

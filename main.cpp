@@ -190,8 +190,7 @@ int main() {
             Auxiliary::GetDataSetsDirPath() + "buildings/pointData1.csv";
     orbSlam(datasetFilePath);
 
-    /*std::string datasetFilePath =
-            Auxiliary::GetDataSetsDirPath() + "cars/20180807145028_lidar_frontcenter_000000091.npz";
-    lidar(datasetFilePath)*/
+    /*std::string datasetFilePath ="/home/tzuk/Documents/carsDatasets/camera_lidar_semantic/20181108_103155/lidar/cam_front_center/20181108103155_lidar_frontcenter_000000028.npz";
+    lidar(datasetFilePath);*/
 
 }

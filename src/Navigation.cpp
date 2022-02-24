@@ -82,8 +82,55 @@ Navigation::objectDetection(std::vector<Point> &points, std::vector<Point> &trac
     }
     return {};
 }
+
+std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                                    std::string pangolinPostfix) {
+    std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
+        return point1.z < point2.z;
+    });
+
+    std::vector<double> z = Auxiliary::getZValues(points);
+    std::vector<double> y = Auxiliary::getYValues(points);
+    std::vector<double> x = Auxiliary::getXValues(points);
+
+    std::vector<double> pointsSizes;
+    std::vector<double> variances;
+    std::vector<std::pair<double, std::vector<Point>>> weightedPoints;
+    while (z.size() > sizeOfJump) {
+        auto cov = Auxiliary::getCovarianceMat(x, y);
+        auto trace = cov.at<double>(0, 0) + cov.at<double>(1, 1);
+        auto det = cv::determinant(cov);
+        double zVariance = Auxiliary::calculateVariance(z);
+        double xVariance = Auxiliary::calculateVariance(x);
+
+        variances.emplace_back(((det / trace)  / zVariance) * z.size());
+        pointsSizes.emplace_back(z.size());
+        weightedPoints.emplace_back(((det / trace) / zVariance) * z.size(),
+                                    std::vector<Point>(points.begin(), points.begin() + z.size()));
+        z.resize(z.size() - sizeOfJump);
+        x.resize(x.size() - sizeOfJump);
+        y.resize(y.size() - sizeOfJump);
+    }
+    std::sort(weightedPoints.begin(), weightedPoints.end(),
+              [](const std::pair<double, std::vector<Point>> &weightedPoint1,
+                 const std::pair<double, std::vector<Point>> &weightedPoint2) -> bool {
+                  return weightedPoint1.first > weightedPoint2.first;
+              });
+    /*Auxiliary::exportToXYZFile(weightedPoints.front().second,
+                               "/home/tzuk/Documents/AutonomousDroneResults/varianceFilter/floor.xyz");
+    Auxiliary::showGraph(pointsSizes, variances, "ro");*/
+    if (isDebug) {
+        Auxiliary::showGraph(pointsSizes, variances, "ro");
+        Auxiliary::SetupPangolin("floor" + pangolinPostfix);
+        Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor" + pangolinPostfix);
+    }
+    return weightedPoints.front().second;
+
+}
+
 std::vector<Point>
-Navigation::getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug, std::string pangolinPostfix) {
+Navigation::getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                std::string pangolinPostfix) {
     std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
         return point1.z > point2.z;
     });
@@ -123,8 +170,10 @@ Navigation::getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOf
     }
     return weightedPoints.front().second;
 }
+
 std::vector<Point>
-Navigation::getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug, std::string pangolinPostfix) {
+Navigation::getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                              std::string pangolinPostfix) {
     std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
         return point1.z < point2.z;
     });
@@ -154,13 +203,11 @@ Navigation::getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJu
                  const std::pair<double, std::vector<Point>> &weightedPoint2) -> bool {
                   return weightedPoint1.first > weightedPoint2.first;
               });
-    /*Auxiliary::exportToXYZFile(weightedPoints.front().second,
-                               "/home/tzuk/Documents/AutonomousDroneResults/varianceFilter/floor.xyz");
-    Auxiliary::showGraph(pointsSizes, variances, "ro");*/
     if (isDebug) {
         Auxiliary::showGraph(pointsSizes, variances, "ro");
         Auxiliary::SetupPangolin("floor" + pangolinPostfix);
         Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor" + pangolinPostfix);
+        //Auxiliary::showCloudPoint(weightedPoints.front().second, points);
     }
     return weightedPoints.front().second;
 }
