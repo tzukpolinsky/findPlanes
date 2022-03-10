@@ -101,12 +101,11 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
         auto trace = cov.at<double>(0, 0) + cov.at<double>(1, 1);
         auto det = cv::determinant(cov);
         double zVariance = Auxiliary::calculateVariance(z);
-        double xVariance = Auxiliary::calculateVariance(x);
-
-        variances.emplace_back(((det / trace)  / zVariance) * z.size());
+        std::cout << "variance: " << zVariance << " size: " << z.size() << std::endl;
+        double score = ((det / trace) / zVariance) * z.size();
+        variances.emplace_back(score);
         pointsSizes.emplace_back(z.size());
-        weightedPoints.emplace_back(((det / trace) / zVariance) * z.size(),
-                                    std::vector<Point>(points.begin(), points.begin() + z.size()));
+        weightedPoints.emplace_back(score, std::vector<Point>(points.begin(), points.begin() + z.size()));
         z.resize(z.size() - sizeOfJump);
         x.resize(x.size() - sizeOfJump);
         y.resize(y.size() - sizeOfJump);
@@ -116,13 +115,11 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
                  const std::pair<double, std::vector<Point>> &weightedPoint2) -> bool {
                   return weightedPoint1.first > weightedPoint2.first;
               });
-    /*Auxiliary::exportToXYZFile(weightedPoints.front().second,
-                               "/home/tzuk/Documents/AutonomousDroneResults/varianceFilter/floor.xyz");
-    Auxiliary::showGraph(pointsSizes, variances, "ro");*/
     if (isDebug) {
         Auxiliary::showGraph(pointsSizes, variances, "ro");
         Auxiliary::SetupPangolin("floor" + pangolinPostfix);
         Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor" + pangolinPostfix);
+
     }
     return weightedPoints.front().second;
 

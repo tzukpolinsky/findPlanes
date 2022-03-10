@@ -24,7 +24,7 @@ cv::Mat points3d_to_mat(const std::vector<cv::Point3d> &points3d) {
     return mat.t();
 }
 
-std::pair<cv::Mat, cv::Mat> calculate_align_matrices(std::vector<cv::Point3d> points) {
+std::pair<cv::Mat, cv::Mat> calculateAlignMatrices(std::vector<cv::Point3d> points) {
     cv::Mat mu_align1;
     cv::Mat R_align;
     cv::reduce(points, mu_align1, 01, CV_REDUCE_AVG);
@@ -72,7 +72,7 @@ cv::Mat convertPointToCVMat(const Point &point) {
 }
 
 std::pair<cv::Mat, cv::Mat> align_map(std::vector<Point> &points) {
-    auto[R_align, mu_align] = calculate_align_matrices(convertToCvPoints(points));
+    auto[R_align, mu_align] = calculateAlignMatrices(convertToCvPoints(points));
 
     for (auto &point: points) {
         auto pnt3d = convertPointToCVMat(point);
