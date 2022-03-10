@@ -83,8 +83,8 @@ Navigation::objectDetection(std::vector<Point> &points, std::vector<Point> &trac
     return {};
 }
 
-std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
-                                                    std::string pangolinPostfix) {
+std::vector<Point> InnerAlg(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                            std::string pangolinPostfix) {
     std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
         return point1.z < point2.z;
     });
@@ -101,14 +101,26 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
         auto trace = cov.at<double>(0, 0) + cov.at<double>(1, 1);
         auto det = cv::determinant(cov);
         double zVariance = Auxiliary::calculateVariance(z);
-        std::cout << "variance: " << zVariance << " size: " << z.size() << std::endl;
-        double score = ((det / trace) / zVariance) * z.size();
-        variances.emplace_back(score);
+        double zStd = std::sqrt(zVariance);
+        double xVariance = Auxiliary::calculateVariance(x);
+        double zMean = Auxiliary::calculateMean(z);
+        std::vector<double> highest(z.end() - sizeOfJump, z.end());
+        double outliers_garde = 0.0;
+        for (double currentZ: highest) {
+            outliers_garde += (currentZ - zMean) / zStd;
+        }
+
+//        outliers_garde = 1 / outliers_garde;
+//        variances.emplace_back(((det / trace) / outliers_garde) * z.size());
+        variances.emplace_back(((det / trace) / (zVariance * outliers_garde)));
         pointsSizes.emplace_back(z.size());
-        weightedPoints.emplace_back(score, std::vector<Point>(points.begin(), points.begin() + z.size()));
+        weightedPoints.emplace_back(((det / trace) / (zVariance * outliers_garde)),
+                                    std::vector<Point>(points.begin(), points.begin() + z.size()));
         z.resize(z.size() - sizeOfJump);
         x.resize(x.size() - sizeOfJump);
         y.resize(y.size() - sizeOfJump);
+
+
     }
     std::sort(weightedPoints.begin(), weightedPoints.end(),
               [](const std::pair<double, std::vector<Point>> &weightedPoint1,
@@ -121,8 +133,38 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
         Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor" + pangolinPostfix);
 
     }
-    return weightedPoints.front().second;
 
+
+    return weightedPoints.front().second;
+}
+
+std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                                    std::string pangolinPostfix) {
+
+    auto init_floor = InnerAlg(points, sizeOfJump, true, pangolinPostfix);
+
+    std::vector<double> z = Auxiliary::getZValues(init_floor);
+    std::vector<double> y = Auxiliary::getYValues(init_floor);
+    std::vector<double> x = Auxiliary::getXValues(init_floor);
+
+    auto floor_mat = Auxiliary::getPointsMatrix(x, y, z);
+
+    cv::PCA floor_pca(floor_mat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
+    cv::Mat floor_eig_vecs = floor_pca.eigenvectors;
+    cv::Mat change_of_basis = floor_eig_vecs.inv();
+
+    z = Auxiliary::getZValues(points);
+    y = Auxiliary::getYValues(points);
+    x = Auxiliary::getXValues(points);
+
+    auto point_mat = Auxiliary::getPointsMatrix(x, y, z);
+    point_mat = (change_of_basis * point_mat.t()).t();
+
+    auto al_points = Auxiliary::getPointsVector(point_mat);
+
+    auto final_floor = InnerAlg(al_points, sizeOfJump, isDebug, pangolinPostfix);
+
+    return final_floor;
 }
 
 std::vector<Point>

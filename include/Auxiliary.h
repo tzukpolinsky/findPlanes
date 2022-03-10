@@ -26,13 +26,18 @@ public:
 
     static std::string GetDataSetsDirPath();
 
-    static double angleToRadians(int angle);
 
     static double det(const Point &point1, const Point &point2);
 
     static double distanceBetweenPointAndSegment(const Point &point, Line segment);
 
+    static double angleToRadians(int angle);
+
     static long myGcd(long a, long b);
+
+    static std::tuple<int, int, int> getRationalInverse(double input);
+
+    static double getAngleFromSlope(double slope);
 
     static double radiansToAngle(double radian);
 
@@ -40,15 +45,42 @@ public:
 
     static double calculateDistance3D(const Point &point1, const Point &point2);
 
+    static double getDistanceToClosestSegment(const Point &point, const std::vector<Line> &segments);
+
+    static double getAngleBySlopes(Line line1, Line line2);
+
+    static double calculateMean(const std::vector<double> &distances);
+
     static double calculateVariance(const std::vector<double> &distances);
+
+    static double calculateMeanOfDistanceDifferences(std::vector<double> distances);
+
+    static std::pair<int, bool> getRotationToTargetInFront(const Point &point1, const Point &point2);
+
+    static std::pair<int, bool>
+    getRotationToTargetInFront(const Point &previous, const Point &current, const Point &destination, bool isMinusUp);
 
     static std::vector<double> getXValues(const std::vector<Point> &points);
 
     static std::vector<double> getYValues(const std::vector<Point> &points);
 
+//#ifdef NOTRPI
+    static void showCloudPoint(const std::vector<Point> &redPoints, const std::vector<Point> &cloud);
+//#endif
+
+    double calculateMedianError(const std::vector<double> &errorVector, int numberOfSamples);
+
+    static std::vector<double> Get3dAnglesBetween2Points(const Point &point1, const Point &point2);
+
+    static double GetPitchFrom2Points(const Point &point1, const Point &point2);
+
+    static double calculateDistanceXZ(const Point &point1, const Point &point2);
+
+    static void showCloudPoint3D(const std::vector<Point> &redPoints, const std::vector<Point> &cloud);
 
     static std::vector<double> getZValues(const std::vector<Point> &points);
-    static void displayLidarOfImage(cv::Mat &img);
+
+    static void exportToXYZFile(const std::vector<Point> &points, std::string fileName = "/tmp/result.xyz");
 
     static void showGraph(std::vector<double> &x, std::vector<double> &y, const std::string &pointsDisplay = "");
 
@@ -63,6 +95,12 @@ public:
     static void SetupPangolin(const std::string &window_name);
 
     static cv::Mat getCovarianceMat(std::vector<double> &x, std::vector<double> &y);
+
+    static cv::Mat getCovarianceMat3D(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+
+    static cv::Mat getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+
+    static std::vector<Point> getPointsVector(cv::Mat points);
 };
 
 
