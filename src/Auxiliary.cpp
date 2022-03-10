@@ -92,7 +92,7 @@ void Auxiliary::DrawMapPointsPangolin(const std::vector<Point> &cloud, const std
     // Define Projection and initial ModelView matrix
     pangolin::OpenGlRenderState s_cam(
             pangolin::ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),
-            pangolin::ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin::AxisY)
+            pangolin::ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin::AxisZ)
     );
 
     pangolin::Renderable tree;
@@ -154,6 +154,7 @@ void Auxiliary::DrawMapPointsPangolin(const std::vector<Point> &cloud, const std
         pangolin::FinishFrame();
     }
     pangolin::GetBoundWindow()->RemoveCurrent();
+    pangolin::DestroyWindow(windowName);
     return;
 }
 
@@ -317,6 +318,28 @@ double Auxiliary::calculateMeanOfDistanceDifferences(std::vector<double> distanc
     return sumOfDistances / (distances.size() - 1);
 }
 
+cv::Mat Auxiliary::getCovarianceMat3D(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
+    cv::Mat aux(x.size(), 2, CV_64F);
+    double xMean = 0.0;
+    double yMean = 0.0;
+    double zMean = 0.0;
+    for (int i = 0; i < x.size(); ++i) {
+        xMean += x[i];
+        yMean += y[i];
+        yMean += z[i];
+    }
+    zMean /= x.size();
+    yMean /= x.size();
+    xMean /= x.size();
+    for (int i = 0; i < x.size(); ++i) {
+        aux.at<double>(i, 0) = x[i] - xMean;
+        aux.at<double>(i, 1) = y[i] - yMean;
+        aux.at<double>(i, 2) = z[i] - zMean;
+    }
+    cv::Mat cov = aux.t() * aux;
+    return cov;
+}
+
 cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> &y) {
     cv::Mat aux(x.size(), 2, CV_64F);
     double xMean = 0.0;
@@ -335,6 +358,26 @@ cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> 
     return cov;
 }
 
+cv::Mat Auxiliary::getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
+    cv::Mat mat(x.size(), 3, CV_64F);
+    for (int i = 0; i < x.size(); ++i) {
+        mat.at<double>(i, 0) = x[i];
+        mat.at<double>(i, 1) = y[i];
+        mat.at<double>(i, 2) = z[i];
+    }
+    return mat;
+}
+
+
+double Auxiliary::calculateMean(const std::vector<double> &distances) {
+    double sumOfDistances = 0.0;
+    for (auto distance: distances) {
+        sumOfDistances += distance;
+    }
+    double mean = sumOfDistances / distances.size();
+    return mean;
+}
+
 double Auxiliary::calculateVariance(const std::vector<double> &distances) {
     double sumOfDistances = 0.0;
     for (auto distance: distances) {
@@ -345,7 +388,7 @@ double Auxiliary::calculateVariance(const std::vector<double> &distances) {
     for (auto distance: distances) {
         variance += pow(distance - mean, 2);
     }
-    return variance;
+    return variance / distances.size();
 }
 
 double Auxiliary::getAngleBySlopes(Line line1, Line line2) {
@@ -370,4 +413,13 @@ std::vector<double> Auxiliary::Get3dAnglesBetween2Points(const Point &point1, co
     double z = acos((point1.x * point2.x + point1.y * point2.y) /
                     (sqrt(pow(point1.x, 2) + pow(point1.y, 2)) * sqrt(pow(point2.x, 2) + pow(point2.y, 2))));
     return {x, y, z};
+}
+
+std::vector<Point> Auxiliary::getPointsVector(cv::Mat points) {
+    std::vector<Point> vec{};
+
+    for (int i = 0; i < points.rows; i++)
+        vec.emplace_back(points.at<double>(i, 0), points.at<double>(i, 1), points.at<double>(i, 2));
+
+    return vec;
 }

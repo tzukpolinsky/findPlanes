@@ -49,6 +49,8 @@ public:
 
     static double getAngleBySlopes(Line line1, Line line2);
 
+    static double calculateMean(const std::vector<double> &distances);
+
     static double calculateVariance(const std::vector<double> &distances);
 
     static double calculateMeanOfDistanceDifferences(std::vector<double> distances);
@@ -92,7 +94,13 @@ public:
 
     static void SetupPangolin(const std::string &window_name);
 
-    static cv::Mat getCovarianceMat(std::vector<double> & x,std::vector<double> &y);
+    static cv::Mat getCovarianceMat(std::vector<double> &x, std::vector<double> &y);
+
+    static cv::Mat getCovarianceMat3D(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+
+    static cv::Mat getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+
+    static std::vector<Point> getPointsVector(cv::Mat points);
 };
 
 

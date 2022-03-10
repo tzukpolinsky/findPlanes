@@ -15,6 +15,8 @@ include_directories(
         ${PYTHON_INCLUDE_DIRS}
 )
 
+message(${Pangolin_INCLUDE_DIRS})
+
 add_library(${PROJECT_NAME}
         src/Point.cpp
         src/Navigation.cpp
