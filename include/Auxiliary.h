@@ -18,7 +18,8 @@
 #include <pangolin/scene/axis.h>
 #include <pangolin/scene/scenehandler.h>
 #include <opencv2/core/mat.hpp>
-
+#include <algorithm>
+#include <opencv2//imgproc.hpp>
 //#endif
 class Auxiliary {
 public:
@@ -34,8 +35,6 @@ public:
     static double angleToRadians(int angle);
 
     static long myGcd(long a, long b);
-
-    static std::tuple<int, int, int> getRationalInverse(double input);
 
     static double getAngleFromSlope(double slope);
 
@@ -55,10 +54,6 @@ public:
 
     static double calculateMeanOfDistanceDifferences(std::vector<double> distances);
 
-    static std::pair<int, bool> getRotationToTargetInFront(const Point &point1, const Point &point2);
-
-    static std::pair<int, bool>
-    getRotationToTargetInFront(const Point &previous, const Point &current, const Point &destination, bool isMinusUp);
 
     static std::vector<double> getXValues(const std::vector<Point> &points);
 
@@ -68,7 +63,6 @@ public:
     static void showCloudPoint(const std::vector<Point> &redPoints, const std::vector<Point> &cloud);
 //#endif
 
-    double calculateMedianError(const std::vector<double> &errorVector, int numberOfSamples);
 
     static std::vector<double> Get3dAnglesBetween2Points(const Point &point1, const Point &point2);
 
@@ -84,10 +78,6 @@ public:
 
     static void showGraph(std::vector<double> &x, std::vector<double> &y, const std::string &pointsDisplay = "");
 
-    static double
-    GetMinDistance(const std::vector<Point> &points, const std::function<double(Point, Point)> &DistanceFunc);
-
-    static std::pair<double, double> GetMinMax(std::vector<double> &points);
 
     static void DrawMapPointsPangolin(const std::vector<Point> &cloud, const std::vector<Point> &redPoints,
                                       const std::string &windowName, const Point &lineFromCenter = Point());
@@ -101,6 +91,9 @@ public:
     static cv::Mat getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
 
     static std::vector<Point> getPointsVector(cv::Mat points);
+
+    static void displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsToDisplay, std::vector<double> &rows,
+                             std::vector<double> &cols);
 };
 
 

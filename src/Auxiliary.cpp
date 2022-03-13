@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/highgui.hpp>
 #include "../include/Auxiliary.h"
 
 Point Auxiliary::GetCenterOfMass(const std::vector<Point> &points) {
@@ -70,6 +71,28 @@ void Auxiliary::exportToXYZFile(const std::vector<Point> &points, std::string fi
         pointData << point.x << " " << point.y << " " << point.z << std::endl;
     }
     pointData.close();
+}
+
+void Auxiliary::displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsToDisplay, std::vector<double> &rows,
+                                    std::vector<double> &cols) {
+    int pixelSize = 3;
+    int pixel_rowoffs = 2;
+    int pixel_coloffs = 2;
+    auto canvas_rows = image.rows;
+    auto canvas_cols = image.cols;
+    for (auto & i : pointsToDisplay) {
+        auto lidarPos = i.lidarOriginalPosition;
+        auto row = std::clamp(int(rows[lidarPos]), 0, canvas_rows);
+        auto col = std::clamp(int(cols[lidarPos]), 0, canvas_cols);
+        image.at<cv::Vec3b>(row + pixel_coloffs, col + pixel_coloffs) = cv::Vec3b(255, 0, 0);
+        image.at<cv::Vec3b>(row , col ) = cv::Vec3b(255, 0, 0);
+        image.at<cv::Vec3b>(row + 1, col + 1) = cv::Vec3b(255, 0, 0);
+        image.at<cv::Vec3b>(row -1, col -1) = cv::Vec3b(255, 0, 0);
+        image.at<cv::Vec3b>(row -2, col -2) = cv::Vec3b(255, 0, 0);
+    }
+    cv::resize(image,image,cv::Size(640,480));
+    cv::imshow("lidarPoints", image);
+    cv::waitKey(0);
 }
 
 void Auxiliary::SetupPangolin(const std::string &window_name) {
@@ -219,76 +242,6 @@ double Auxiliary::calculateDistanceXZ(const Point &point1, const Point &point2) 
     return sqrt(pow(point2.x - point1.x, 2) + pow(point2.z - point1.z, 2));
 }
 
-std::pair<int, bool>
-Auxiliary::getRotationToTargetInFront(const Point &previous, const Point &current, const Point &destination,
-                                      bool isMinusUp) {
-    double PreviousToCurrent = atan2(previous.y - current.y, previous.x - current.x);
-    double CurrentToDistance = atan2(destination.y - current.y, destination.x - current.x);
-    double angle = Auxiliary::radiansToAngle(CurrentToDistance - PreviousToCurrent);
-    std::cout << "angle:" << angle << std::endl;
-    bool clockwise;
-    if (angle < 0) {
-        if (angle >= -180) {
-            angle *= -1;
-            clockwise = isMinusUp;
-        } else {
-            angle += 360;
-            clockwise = !isMinusUp;
-        }
-    } else {
-        if (angle >= 180) {
-            clockwise = !isMinusUp;
-            angle = 360 - angle;
-        } else {
-            clockwise = isMinusUp;
-        }
-    }
-    if (angle > 90) {
-        angle = 180 - angle;
-    }
-    return std::pair<int, bool>{angle, clockwise};
-}
-
-std::pair<double, double> Auxiliary::GetMinMax(std::vector<double> &points) {
-    double min = std::numeric_limits<double>::max();
-    double max = std::numeric_limits<double>::min();
-    for (const auto &point: points) {
-        if (min > point) {
-            min = point;
-        } else if (max < point) {
-            max = point;
-        }
-    }
-    return {min, max};
-}
-
-double
-Auxiliary::GetMinDistance(const std::vector<Point> &points, const std::function<double(Point, Point)> &DistanceFunc) {
-    double minDistance = std::numeric_limits<double>::max();
-    for (const auto &point1: points) {
-        for (const auto &point2: points) {
-            double distance = DistanceFunc(point1, point2);
-            if (distance != 0 && distance < minDistance) {
-                minDistance = distance;
-            }
-        }
-    }
-    return minDistance;
-}
-
-std::pair<int, bool> Auxiliary::getRotationToTargetInFront(const Point &point1, const Point &point2) {
-    Eigen::Vector3d vector1(point1.x, point1.y, 0);
-    Eigen::Vector3d vector2(point2.x, point2.y, 0);
-    Eigen::Vector3d unitVector1 = vector1 / vector1.norm();
-    Eigen::Vector3d unitVector2 = vector2 / vector2.norm();
-    int angle = int(radiansToAngle(acos(unitVector1.dot(unitVector2))));
-    bool clockwise = unitVector1.cross(unitVector2).z() <= 0;
-    if (angle > 90) {
-        angle = 180 - angle;
-        clockwise = !clockwise;
-    }
-    return std::pair<int, bool>{angle, clockwise};
-}
 
 long Auxiliary::myGcd(long a, long b) {
     if (a == 0)

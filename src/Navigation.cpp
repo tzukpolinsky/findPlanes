@@ -140,7 +140,7 @@ std::vector<Point> InnerAlg(std::vector<Point> &points, unsigned long sizeOfJump
 
 std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
                                                     std::string pangolinPostfix) {
-
+    return InnerAlg(points, sizeOfJump, isDebug, pangolinPostfix);
     auto init_floor = InnerAlg(points, sizeOfJump, true, pangolinPostfix);
 
     std::vector<double> z = Auxiliary::getZValues(init_floor);

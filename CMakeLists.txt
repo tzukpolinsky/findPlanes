@@ -3,6 +3,7 @@ project(findPlanes)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 find_package(OpenCV 3.0 QUIET)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(Pangolin REQUIRED)
 find_package(PythonLibs REQUIRED)
@@ -29,7 +30,6 @@ target_link_libraries(${PROJECT_NAME}
         ${Pangolin_LIBRARIES}
         -lpthread ${PYTHON_LIBRARIES}
         )
-set(CMAKE_CXX_STANDARD 17)
 
 add_executable(test main.cpp)
 target_link_libraries(test ${PROJECT_NAME} cnpy)

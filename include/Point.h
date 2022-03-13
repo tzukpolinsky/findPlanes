@@ -23,7 +23,7 @@ public:
      * q* is quaternion
      *
      * */
-    Point(double x, double y, double z, int lidarId = -1);
+    Point(double x, double y, double z, int lidarOriginalPosition=0,int lidarId = -1);
 
     bool operator==(const Point &ref) const {
         return this->x == ref.x && this->y == ref.y && this->z == ref.z;
@@ -42,6 +42,7 @@ public:
     double y;
     double z;
     int lidarId;
+    int lidarOriginalPosition;
 };
 
 
