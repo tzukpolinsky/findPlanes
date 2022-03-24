@@ -84,13 +84,13 @@ void Auxiliary::displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsTo
         auto lidarPos = i.lidarOriginalPosition;
         auto row = std::clamp(int(rows[lidarPos]), 0, canvas_rows);
         auto col = std::clamp(int(cols[lidarPos]), 0, canvas_cols);
-        image.at<cv::Vec3b>(row + pixel_coloffs, col + pixel_coloffs) = cv::Vec3b(255, 0, 0);
-        image.at<cv::Vec3b>(row , col ) = cv::Vec3b(255, 0, 0);
+        image.at<cv::Vec3b>(row + pixel_coloffs, col + pixel_coloffs) = cv::Vec3b(0, 0, 255);
+        /*image.at<cv::Vec3b>(row , col ) = cv::Vec3b(255, 0, 0);
         image.at<cv::Vec3b>(row + 1, col + 1) = cv::Vec3b(255, 0, 0);
         image.at<cv::Vec3b>(row -1, col -1) = cv::Vec3b(255, 0, 0);
-        image.at<cv::Vec3b>(row -2, col -2) = cv::Vec3b(255, 0, 0);
+        image.at<cv::Vec3b>(row -2, col -2) = cv::Vec3b(255, 0, 0);*/
     }
-    cv::resize(image,image,cv::Size(640,480));
+    //cv::resize(image,image,cv::Size(640,480));
     cv::imshow("lidarPoints", image);
     cv::waitKey(0);
 }

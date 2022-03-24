@@ -127,22 +127,23 @@ std::vector<Point> InnerAlg(std::vector<Point> &points, unsigned long sizeOfJump
                  const std::pair<double, std::vector<Point>> &weightedPoint2) -> bool {
                   return weightedPoint1.first > weightedPoint2.first;
               });
+    auto bestPoints =
+            weightedPoints.front().second;//.size() > weightedPoints.back().second.size() ? weightedPoints.back().second: weightedPoints.front().second;
     if (isDebug) {
         Auxiliary::showGraph(pointsSizes, variances, "ro");
         Auxiliary::SetupPangolin("floor" + pangolinPostfix);
-        Auxiliary::DrawMapPointsPangolin(points, weightedPoints.front().second, "floor" + pangolinPostfix);
+        Auxiliary::DrawMapPointsPangolin(points, bestPoints, "floor" + pangolinPostfix);
 
     }
 
 
-    return weightedPoints.front().second;
+    return bestPoints;
 }
 
 std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
                                                     std::string pangolinPostfix) {
-    return InnerAlg(points, sizeOfJump, isDebug, pangolinPostfix);
     auto init_floor = InnerAlg(points, sizeOfJump, true, pangolinPostfix);
-
+    std::cout << "init floor: " << init_floor.size() << std::endl;
     std::vector<double> z = Auxiliary::getZValues(init_floor);
     std::vector<double> y = Auxiliary::getYValues(init_floor);
     std::vector<double> x = Auxiliary::getXValues(init_floor);
@@ -151,20 +152,39 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
 
     cv::PCA floor_pca(floor_mat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
     cv::Mat floor_eig_vecs = floor_pca.eigenvectors;
-    cv::Mat change_of_basis = floor_eig_vecs.inv();
+    cv::Mat changeOfBasis = floor_eig_vecs.inv();
 
     z = Auxiliary::getZValues(points);
     y = Auxiliary::getYValues(points);
     x = Auxiliary::getXValues(points);
 
-    auto point_mat = Auxiliary::getPointsMatrix(x, y, z);
-    point_mat = (change_of_basis * point_mat.t()).t();
+    auto pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
+    pointsMatrix = (changeOfBasis * pointsMatrix.t()).t();
 
-    auto al_points = Auxiliary::getPointsVector(point_mat);
+    auto al_points = Auxiliary::getPointsVector(pointsMatrix);
 
-    auto final_floor = InnerAlg(al_points, sizeOfJump, isDebug, pangolinPostfix);
+    auto finalFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
+    std::cout << "final floor: " << finalFloor.size() << std::endl;
 
-    return final_floor;
+    if (finalFloor.size() * 1.5 > al_points.size()) {
+
+        changeOfBasis.at<double>(0, 2) *= -1;
+        changeOfBasis.at<double>(1, 2) *= -1;
+        changeOfBasis.at<double>(2, 2) *= -1;
+        z = Auxiliary::getZValues(points);
+        y = Auxiliary::getYValues(points);
+        x = Auxiliary::getXValues(points);
+        std::cout << changeOfBasis << std::endl;
+        pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
+        pointsMatrix = (changeOfBasis * pointsMatrix.t()).t();
+
+        al_points = Auxiliary::getPointsVector(pointsMatrix);
+
+        finalFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
+        std::cout << "final floor: " << finalFloor.size() << std::endl;
+
+    }
+    return finalFloor;
 }
 
 std::vector<Point>
