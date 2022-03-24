@@ -31,6 +31,7 @@ public:
 
     static std::string GetDataSetsDirPath();
 
+    static std::vector<Point> getAveragedPointsSet(std::vector<Point> &points);
 
     static double det(const Point &point1, const Point &point2);
 
@@ -97,14 +98,14 @@ public:
 
     static cv::Mat getCovarianceMat3D(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
 
-    static cv::Mat getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+    static cv::Mat getPointsMatrix(std::vector<Point> &points);
 
     static std::vector<Point> getPointsVector(cv::Mat points);
 
-    static void displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath,std::string dir,std::string database,std::string fileName);
+    static void displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath, std::string dir,
+                                    std::string database, std::string fileName);
 
-    static std::tuple<double, double, double>
-    RemoveMean(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+    static Point getMean(std::vector<Point> &points);
 };
 
 

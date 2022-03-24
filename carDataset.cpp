@@ -113,6 +113,6 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
 }
 
 int main() {
-    std::string dataBasePath = "/media/daniel/wd_elements/carsDatasets/camera_lidar_semantic";
+    std::string dataBasePath = "/home/tzuk/Documents/carsDatasets/camera_lidar_semantic";
     return loopThroughCarsDataBase(dataBasePath);
 }

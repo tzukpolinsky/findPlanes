@@ -74,7 +74,8 @@ void Auxiliary::exportToXYZFile(const std::vector<Point> &points, std::string fi
     pointData.close();
 }
 
-void Auxiliary::displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath,std::string dir,std::string database,std::string fileName) {
+void Auxiliary::displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath, std::string dir,
+                                    std::string database, std::string fileName) {
     auto rows = getRowsIndicesFromPYZFile(npzFilePath);
     auto cols = getColsIndicesFromPYZFile(npzFilePath);
     std::string imagePath = dir + "/camera";
@@ -309,20 +310,20 @@ cv::Mat Auxiliary::getCovarianceMat3D(std::vector<double> &x, std::vector<double
     return cov;
 }
 
-std::tuple<double,double,double> Auxiliary::RemoveMean(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
-    cv::Mat aux(x.size(), 2, CV_64F);
+Point Auxiliary::getMean(std::vector<Point> &points) {
+    cv::Mat aux(points.size(), 2, CV_64F);
     double xMean = 0.0;
     double yMean = 0.0;
     double zMean = 0.0;
-    for (int i = 0; i < x.size(); ++i) {
-        xMean += x[i];
-        yMean += y[i];
-        yMean += z[i];
+    for (auto &point: points) {
+        xMean += point.x;
+        yMean += point.y;
+        zMean += point.z;
     }
-    zMean /= x.size();
-    yMean /= x.size();
-    xMean /= x.size();
-    return std::tuple(xMean, yMean, zMean);
+    zMean /= (double) points.size();
+    yMean /= (double) points.size();
+    xMean /= (double) points.size();
+    return Point(xMean, yMean, zMean);
 }
 
 cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> &y) {
@@ -342,6 +343,7 @@ cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> 
     cv::Mat cov = aux.t() * aux;
     return cov;
 }
+
 std::vector<double> Auxiliary::getColsIndicesFromPYZFile(const std::string &fileName) {
     std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
     return npPointsMap["col"].as_vec<double>();
@@ -365,12 +367,29 @@ std::vector<Point> Auxiliary::getPointsFromPYZFile(const std::string &fileName) 
 
     return points;
 }
-cv::Mat Auxiliary::getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
-    cv::Mat mat(x.size(), 3, CV_64F);
-    for (int i = 0; i < x.size(); ++i) {
-        mat.at<double>(i, 0) = x[i];
-        mat.at<double>(i, 1) = y[i];
-        mat.at<double>(i, 2) = z[i];
+
+std::vector<Point> Auxiliary::getAveragedPointsSet(std::vector<Point> &points) {
+    std::vector<Point> newPoints;
+    auto mean = Auxiliary::getMean(points);
+    for (auto &point: points) {
+        Point newPoint;
+        newPoint.x = point.x - mean.x;
+        newPoint.y = point.y - mean.y;
+        newPoint.z = point.z - mean.z;
+        newPoints.emplace_back(newPoint);
+    }
+    return newPoints;
+}
+
+cv::Mat Auxiliary::getPointsMatrix(std::vector<Point> &points) {
+
+    cv::Mat mat(points.size(), 3, CV_64F);
+
+    for (int i = 0; i < points.size(); ++i) {
+        auto point = points[i];
+        mat.at<double>(i, 0) = point.x;
+        mat.at<double>(i, 1) = point.y;
+        mat.at<double>(i, 2) = point.z;
     }
     return mat;
 }
@@ -424,9 +443,7 @@ std::vector<double> Auxiliary::Get3dAnglesBetween2Points(const Point &point1, co
 
 std::vector<Point> Auxiliary::getPointsVector(cv::Mat points) {
     std::vector<Point> vec{};
-
     for (int i = 0; i < points.rows; i++)
         vec.emplace_back(points.at<double>(i, 0), points.at<double>(i, 1), points.at<double>(i, 2));
-
     return vec;
 }

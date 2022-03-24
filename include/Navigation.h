@@ -22,6 +22,9 @@ public:
                                             bool isDebug = false, std::string pangolinPostfix = "");
 
     std::vector<Point>
+    findFloorAndAlign(std::vector<Point> points, std::vector<Point> floor,int heightDirection);
+
+    std::vector<Point>
     getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
                         std::string pangolinPostfix = "");
 
