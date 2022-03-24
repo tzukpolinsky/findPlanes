@@ -5,6 +5,7 @@
 #include <fstream>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui.hpp>
+#include <filesystem>
 #include "../include/Auxiliary.h"
 
 Point Auxiliary::GetCenterOfMass(const std::vector<Point> &points) {
@@ -73,8 +74,23 @@ void Auxiliary::exportToXYZFile(const std::vector<Point> &points, std::string fi
     pointData.close();
 }
 
-void Auxiliary::displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsToDisplay, std::vector<double> &rows,
-                                    std::vector<double> &cols) {
+void Auxiliary::displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath,std::string dir,std::string database,std::string fileName) {
+    auto rows = getRowsIndicesFromPYZFile(npzFilePath);
+    auto cols = getColsIndicesFromPYZFile(npzFilePath);
+    std::string imagePath = dir + "/camera";
+    std::string cameraLocation = database.substr(4);
+    for (auto &cameraDir: std::filesystem::directory_iterator(imagePath)) {
+        std::string currentCameraLocation = cameraDir.path().filename().string().substr(4);
+        if (cameraLocation == currentCameraLocation) {
+            imagePath += "/" + cameraDir.path().filename().string();
+            break;
+        }
+    }
+    imagePath +=
+            "/" + fileName.substr(0, 15) + "camera" +
+            fileName.substr(20, fileName.size() - 24) +
+            ".png";
+    cv::Mat image = cv::imread(imagePath);
     int pixelSize = 3;
     int pixel_rowoffs = 2;
     int pixel_coloffs = 2;
@@ -326,7 +342,29 @@ cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> 
     cv::Mat cov = aux.t() * aux;
     return cov;
 }
+std::vector<double> Auxiliary::getColsIndicesFromPYZFile(const std::string &fileName) {
+    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
+    return npPointsMap["col"].as_vec<double>();
+}
 
+std::vector<double> Auxiliary::getRowsIndicesFromPYZFile(const std::string &fileName) {
+    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
+    return npPointsMap["row"].as_vec<double>();
+}
+
+std::vector<Point> Auxiliary::getPointsFromPYZFile(const std::string &fileName) {
+    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
+    auto numPyPoints = npPointsMap["points"].as_vec<double>();
+    auto lidarIds = npPointsMap["lidar_id"].as_vec<double>();
+    std::vector<Point> points;
+    int lidarId = 0;
+    for (int i = 0; i < numPyPoints.size(); i += 3) {
+        points.emplace_back(
+                Point(numPyPoints[i], numPyPoints[i + 1], numPyPoints[i + 2], std::floor(i / 3), lidarIds[lidarId++]));
+    }
+
+    return points;
+}
 cv::Mat Auxiliary::getPointsMatrix(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
     cv::Mat mat(x.size(), 3, CV_64F);
     for (int i = 0; i < x.size(); ++i) {

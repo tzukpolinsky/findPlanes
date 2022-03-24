@@ -3,8 +3,6 @@
 //
 
 #include <iostream>
-#include <cnpy.h>
-#include <filesystem>
 #include "Navigation.h"
 
 cv::Mat points3d_to_mat(const std::vector<cv::Point3d> &points3d) {
@@ -81,29 +79,6 @@ std::pair<cv::Mat, cv::Mat> align_map(std::vector<Point> &points) {
     return {R_align, mu_align};
 }
 
-std::vector<double> getColsIndicesFromPYZFile(const std::string &fileName) {
-    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
-    return npPointsMap["col"].as_vec<double>();
-}
-
-std::vector<double> getRowsIndicesFromPYZFile(const std::string &fileName) {
-    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
-    return npPointsMap["row"].as_vec<double>();
-}
-
-std::vector<Point> getPointsFromPYZFile(const std::string &fileName) {
-    std::map<std::string, cnpy::NpyArray> npPointsMap = cnpy::npz_load(fileName);
-    auto numPyPoints = npPointsMap["points"].as_vec<double>();
-    auto lidarIds = npPointsMap["lidar_id"].as_vec<double>();
-    std::vector<Point> points;
-    int lidarId = 0;
-    for (int i = 0; i < numPyPoints.size(); i += 3) {
-        points.emplace_back(
-                Point(numPyPoints[i], numPyPoints[i + 1], numPyPoints[i + 2], std::floor(i / 3), lidarIds[lidarId++]));
-    }
-
-    return points;
-}
 
 int loopThroughCarsDataBase(std::string &dataBasePath) {
     Navigation navigation;
@@ -116,30 +91,13 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
                 for (auto &npzFile: std::filesystem::directory_iterator(database)) {
                     std::string fileName = npzFile.path().filename().string();
                     if (fileName.find("side") != std::string::npos) {
-                        auto points = getPointsFromPYZFile(npzFile.path().string());
-                        //align_map(points);
+                        auto points = Auxiliary::getPointsFromPYZFile(npzFile.path().string());
                         std::cout << "amount of points: " << points.size() << " for file: " << fileName
                                   << std::endl;
                         auto start = std::chrono::high_resolution_clock::now();
                         auto floor = navigation.getFloorByCovariance(points, points.size() / 100, !isDebug, fileName);
                         if (isDebug) {
-                            auto rows = getRowsIndicesFromPYZFile(npzFile.path().string());
-                            auto cols = getColsIndicesFromPYZFile(npzFile.path().string());
-                            std::string imagePath = dir.path().string() + "/camera";
-                            std::string cameraLocation = database.path().filename().string().substr(4);
-                            for (auto &cameraDir: std::filesystem::directory_iterator(imagePath)) {
-                                std::string currentCameraLocation = cameraDir.path().filename().string().substr(4);
-                                if (cameraLocation == currentCameraLocation) {
-                                    imagePath += "/" + cameraDir.path().filename().string();
-                                    break;
-                                }
-                            }
-                            imagePath +=
-                                    "/" + fileName.substr(0, 15) + "camera" +
-                                    fileName.substr(20, fileName.size() - 24) +
-                                    ".png";
-                            cv::Mat image = cv::imread(imagePath);
-                            Auxiliary::displayLidarOnImage(image, floor, rows, cols);
+                            Auxiliary::displayLidarOnImage(floor,npzFile.path().string(),dir.path().string(),database.path().string(),fileName);
                         }
                         auto stop = std::chrono::high_resolution_clock::now();
                         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

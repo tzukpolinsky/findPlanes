@@ -147,36 +147,19 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
     std::vector<double> z = Auxiliary::getZValues(init_floor);
     std::vector<double> y = Auxiliary::getYValues(init_floor);
     std::vector<double> x = Auxiliary::getXValues(init_floor);
-
+    auto[xMean, yMean, zMean]=Auxiliary::RemoveMean(x, y, z);
+    for (int i = 0; i < z.size(); ++i) {
+        x[i] -= xMean;
+        y[i] -= yMean;
+        z[i] -= zMean;
+    }
     auto floor_mat = Auxiliary::getPointsMatrix(x, y, z);
 
     cv::PCA floor_pca(floor_mat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
-    cv::Mat floor_eig_vecs = floor_pca.eigenvectors;
-    cv::Mat changeOfBasis = floor_eig_vecs;
-
-    auto[xMean, yMean, zMean]=Auxiliary::RemoveMean(x, y, z);
-
-
-    z = Auxiliary::getZValues(points);
-    y = Auxiliary::getYValues(points);
-    x = Auxiliary::getXValues(points);
+    cv::Mat changeOfBasis = floor_pca.eigenvectors;
 
     auto pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
-
-    for (int i = 0; i < x.size(); ++i) {
-        pointsMatrix.at<double>(i, 0) -= xMean;
-        pointsMatrix.at<double>(i, 1) -= yMean;
-        pointsMatrix.at<double>(i, 2) -= zMean;
-    }
-
     pointsMatrix = (changeOfBasis * (pointsMatrix.t())).t();
-
-//    for (int i = 0; i < x.size(); ++i) {
-//        pointsMatrix.at<double>(i, 0) += xMean;
-//        pointsMatrix.at<double>(i, 1) += yMean;
-//        pointsMatrix.at<double>(i, 2) += zMean;
-//    }
-
     auto al_points = Auxiliary::getPointsVector(pointsMatrix);
 
     auto finalFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
@@ -236,9 +219,7 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
         floor_mat = Auxiliary::getPointsMatrix(x, y, z);
 
         floor_pca(floor_mat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
-        floor_eig_vecs = floor_pca.eigenvectors;
-        changeOfBasis = floor_eig_vecs;
-
+        changeOfBasis = floor_pca.eigenvectors;
         std::tie(xMean, yMean, zMean) = Auxiliary::RemoveMean(x, y, z);
 
 

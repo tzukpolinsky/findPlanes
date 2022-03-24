@@ -15,6 +15,9 @@
 #include <limits>
 #include <pangolin/pangolin.h>
 
+#include <cnpy.h>
+#include <filesystem>
+
 #include <pangolin/scene/axis.h>
 #include <pangolin/scene/scenehandler.h>
 #include <opencv2/core/mat.hpp>
@@ -79,6 +82,11 @@ public:
 
     static void showGraph(std::vector<double> &x, std::vector<double> &y, const std::string &pointsDisplay = "");
 
+    static std::vector<double> getColsIndicesFromPYZFile(const std::string &fileName);
+
+    static std::vector<double> getRowsIndicesFromPYZFile(const std::string &fileName);
+
+    static std::vector<Point> getPointsFromPYZFile(const std::string &fileName);
 
     static void DrawMapPointsPangolin(const std::vector<Point> &cloud, const std::vector<Point> &redPoints,
                                       const std::string &windowName, const Point &lineFromCenter = Point());
@@ -93,10 +101,10 @@ public:
 
     static std::vector<Point> getPointsVector(cv::Mat points);
 
-    static void displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsToDisplay, std::vector<double> &rows,
-                                    std::vector<double> &cols);
+    static void displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath,std::string dir,std::string database,std::string fileName);
 
-    static std::tuple<double,double,double> RemoveMean(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
+    static std::tuple<double, double, double>
+    RemoveMean(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
 };
 
 
