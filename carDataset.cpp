@@ -115,7 +115,7 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
             for (auto &database: std::filesystem::directory_iterator(dir.path().string() + "/lidar")) {
                 for (auto &npzFile: std::filesystem::directory_iterator(database)) {
                     std::string fileName = npzFile.path().filename().string();
-                    //if (fileName.find("center") != std::string::npos) {
+                    if (fileName.find("side") != std::string::npos) {
                         auto points = getPointsFromPYZFile(npzFile.path().string());
                         //align_map(points);
                         std::cout << "amount of points: " << points.size() << " for file: " << fileName
@@ -144,7 +144,7 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
                         auto stop = std::chrono::high_resolution_clock::now();
                         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
                         std::cout << "for file: " << fileName << "time : " << duration.count() / 1000 << std::endl;
-                    //}
+                    }
                 }
             }
         }
@@ -155,6 +155,6 @@ int loopThroughCarsDataBase(std::string &dataBasePath) {
 }
 
 int main() {
-    std::string dataBasePath = "/home/tzuk/Documents/carsDatasets/camera_lidar_semantic";
+    std::string dataBasePath = "/media/daniel/wd_elements/carsDatasets/camera_lidar_semantic";
     return loopThroughCarsDataBase(dataBasePath);
 }

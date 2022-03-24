@@ -152,36 +152,166 @@ std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, 
 
     cv::PCA floor_pca(floor_mat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
     cv::Mat floor_eig_vecs = floor_pca.eigenvectors;
-    cv::Mat changeOfBasis = floor_eig_vecs.inv();
+    cv::Mat changeOfBasis = floor_eig_vecs;
+
+    auto[xMean, yMean, zMean]=Auxiliary::RemoveMean(x, y, z);
+
 
     z = Auxiliary::getZValues(points);
     y = Auxiliary::getYValues(points);
     x = Auxiliary::getXValues(points);
 
     auto pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
-    pointsMatrix = (changeOfBasis * pointsMatrix.t()).t();
+
+    for (int i = 0; i < x.size(); ++i) {
+        pointsMatrix.at<double>(i, 0) -= xMean;
+        pointsMatrix.at<double>(i, 1) -= yMean;
+        pointsMatrix.at<double>(i, 2) -= zMean;
+    }
+
+    pointsMatrix = (changeOfBasis * (pointsMatrix.t())).t();
+
+//    for (int i = 0; i < x.size(); ++i) {
+//        pointsMatrix.at<double>(i, 0) += xMean;
+//        pointsMatrix.at<double>(i, 1) += yMean;
+//        pointsMatrix.at<double>(i, 2) += zMean;
+//    }
 
     auto al_points = Auxiliary::getPointsVector(pointsMatrix);
 
     auto finalFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
     std::cout << "final floor: " << finalFloor.size() << std::endl;
 
-    if (finalFloor.size() * 1.5 > al_points.size()) {
 
-        changeOfBasis.at<double>(0, 2) *= -1;
-        changeOfBasis.at<double>(1, 2) *= -1;
-        changeOfBasis.at<double>(2, 2) *= -1;
+//    if (finalFloor.size() * 1.5 > al_points.size()) {
+
+    changeOfBasis.at<double>(0, 2) *= -1;
+    changeOfBasis.at<double>(1, 2) *= -1;
+    changeOfBasis.at<double>(2, 2) *= -1;
+
+    z = Auxiliary::getZValues(finalFloor);
+    y = Auxiliary::getYValues(finalFloor);
+    x = Auxiliary::getXValues(finalFloor);
+
+    std::tie(xMean, yMean, zMean) = Auxiliary::RemoveMean(x, y, z);
+
+
+    z = Auxiliary::getZValues(points);
+    y = Auxiliary::getYValues(points);
+    x = Auxiliary::getXValues(points);
+
+    pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
+
+    for (int i = 0; i < x.size(); ++i) {
+        pointsMatrix.at<double>(i, 0) -= xMean;
+        pointsMatrix.at<double>(i, 1) -= yMean;
+        pointsMatrix.at<double>(i, 2) -= zMean;
+    }
+
+    pointsMatrix = (changeOfBasis * (pointsMatrix.t())).t();
+
+//    for (int i = 0; i < x.size(); ++i) {
+//        pointsMatrix.at<double>(i, 0) += xMean;
+//        pointsMatrix.at<double>(i, 1) += yMean;
+//        pointsMatrix.at<double>(i, 2) += zMean;
+//    }
+
+    al_points = Auxiliary::getPointsVector(pointsMatrix);
+
+    auto invFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
+    std::cout << "final floor: " << finalFloor.size() << std::endl;
+
+    if (finalFloor.size() > invFloor.size())
+        std::copy(invFloor.begin(), invFloor.end(), finalFloor.begin());
+
+//    }
+
+    for (int i = 0; i < 5; ++i) {
+        finalFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
+        std::cout << "init floor: " << finalFloor.size() << std::endl;
+        z = Auxiliary::getZValues(finalFloor);
+        y = Auxiliary::getYValues(finalFloor);
+        x = Auxiliary::getXValues(finalFloor);
+
+        floor_mat = Auxiliary::getPointsMatrix(x, y, z);
+
+        floor_pca(floor_mat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
+        floor_eig_vecs = floor_pca.eigenvectors;
+        changeOfBasis = floor_eig_vecs;
+
+        std::tie(xMean, yMean, zMean) = Auxiliary::RemoveMean(x, y, z);
+
+
         z = Auxiliary::getZValues(points);
         y = Auxiliary::getYValues(points);
         x = Auxiliary::getXValues(points);
-        std::cout << changeOfBasis << std::endl;
-        pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
-        pointsMatrix = (changeOfBasis * pointsMatrix.t()).t();
 
+        pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
+
+        for (int i = 0; i < x.size(); ++i) {
+            pointsMatrix.at<double>(i, 0) -= xMean;
+            pointsMatrix.at<double>(i, 1) -= yMean;
+            pointsMatrix.at<double>(i, 2) -= zMean;
+        }
+
+        pointsMatrix = (changeOfBasis * (pointsMatrix.t())).t();
+
+//        for (int i = 0; i < x.size(); ++i) {
+//            pointsMatrix.at<double>(i, 0) += xMean;
+//            pointsMatrix.at<double>(i, 1) += yMean;
+//            pointsMatrix.at<double>(i, 2) += zMean;
+//        }
         al_points = Auxiliary::getPointsVector(pointsMatrix);
 
         finalFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
         std::cout << "final floor: " << finalFloor.size() << std::endl;
+
+
+//        if (finalFloor.size() * 1.5 > al_points.size()) {
+
+        changeOfBasis.at<double>(0, 2) *= -1;
+        changeOfBasis.at<double>(1, 2) *= -1;
+        changeOfBasis.at<double>(2, 2) *= -1;
+
+        z = Auxiliary::getZValues(finalFloor);
+        y = Auxiliary::getYValues(finalFloor);
+        x = Auxiliary::getXValues(finalFloor);
+
+        std::tie(xMean, yMean, zMean) = Auxiliary::RemoveMean(x, y, z);
+
+
+        z = Auxiliary::getZValues(points);
+        y = Auxiliary::getYValues(points);
+        x = Auxiliary::getXValues(points);
+
+        pointsMatrix = Auxiliary::getPointsMatrix(x, y, z);
+
+        for (int i = 0; i < x.size(); ++i) {
+            pointsMatrix.at<double>(i, 0) -= xMean;
+            pointsMatrix.at<double>(i, 1) -= yMean;
+            pointsMatrix.at<double>(i, 2) -= zMean;
+        }
+
+        pointsMatrix = (changeOfBasis * (pointsMatrix.t())).t();
+
+//        for (int i = 0; i < x.size(); ++i) {
+//            pointsMatrix.at<double>(i, 0) += xMean;
+//            pointsMatrix.at<double>(i, 1) += yMean;
+//            pointsMatrix.at<double>(i, 2) += zMean;
+//        }
+
+        al_points = Auxiliary::getPointsVector(pointsMatrix);
+
+        invFloor = InnerAlg(al_points, sizeOfJump, true, pangolinPostfix);
+        std::cout << "final floor: " << finalFloor.size() << std::endl;
+
+        if (finalFloor.size() > invFloor.size()) {
+            std::copy(invFloor.begin(), invFloor.end(), finalFloor.begin());
+            std::cout << "Inverted" << std::endl;
+        }
+
+//        }
+
 
     }
     return finalFloor;

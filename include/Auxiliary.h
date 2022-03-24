@@ -20,6 +20,7 @@
 #include <opencv2/core/mat.hpp>
 #include <algorithm>
 #include <opencv2//imgproc.hpp>
+
 //#endif
 class Auxiliary {
 public:
@@ -93,7 +94,9 @@ public:
     static std::vector<Point> getPointsVector(cv::Mat points);
 
     static void displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsToDisplay, std::vector<double> &rows,
-                             std::vector<double> &cols);
+                                    std::vector<double> &cols);
+
+    static std::tuple<double,double,double> RemoveMean(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
 };
 
 

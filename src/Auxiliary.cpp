@@ -80,7 +80,7 @@ void Auxiliary::displayLidarOnImage(cv::Mat &image, std::vector<Point> &pointsTo
     int pixel_coloffs = 2;
     auto canvas_rows = image.rows;
     auto canvas_cols = image.cols;
-    for (auto & i : pointsToDisplay) {
+    for (auto &i: pointsToDisplay) {
         auto lidarPos = i.lidarOriginalPosition;
         auto row = std::clamp(int(rows[lidarPos]), 0, canvas_rows);
         auto col = std::clamp(int(cols[lidarPos]), 0, canvas_cols);
@@ -291,6 +291,22 @@ cv::Mat Auxiliary::getCovarianceMat3D(std::vector<double> &x, std::vector<double
     }
     cv::Mat cov = aux.t() * aux;
     return cov;
+}
+
+std::tuple<double,double,double> Auxiliary::RemoveMean(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
+    cv::Mat aux(x.size(), 2, CV_64F);
+    double xMean = 0.0;
+    double yMean = 0.0;
+    double zMean = 0.0;
+    for (int i = 0; i < x.size(); ++i) {
+        xMean += x[i];
+        yMean += y[i];
+        yMean += z[i];
+    }
+    zMean /= x.size();
+    yMean /= x.size();
+    xMean /= x.size();
+    return std::tuple(xMean, yMean, zMean);
 }
 
 cv::Mat Auxiliary::getCovarianceMat(std::vector<double> &x, std::vector<double> &y) {
