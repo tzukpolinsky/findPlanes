@@ -18,11 +18,11 @@ public:
     std::vector<Point> getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
                                          std::string pangolinPostfix = "");
 
-    std::vector<Point> getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump,
+    std::pair<long,std::vector<Point>> getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump,
                                             bool isDebug = false, std::string pangolinPostfix = "");
 
     std::vector<Point>
-    findFloorAndAlign(std::vector<Point> points, std::vector<Point> floor,int heightDirection);
+    alignByFloor(std::vector<Point> points, std::vector<Point> floor, int heightDirection);
 
     std::vector<Point>
     getFloorFromOrbSlam(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
@@ -31,6 +31,13 @@ public:
     std::vector<bool>
     objectDetection(std::vector<Point> &points, std::vector<Point> &track, Point &currentPosition);
 
+    std::vector<Point> alignByAngle(std::vector<Point> points, double roll, double pitch);
+
+    std::vector<Point>
+    getFloorAndAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug, std::string pangolinPostfix);
+
+    std::vector<Point> getFloorAndBruteForceAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                                  std::string pangolinPostfix);
 };
 
 

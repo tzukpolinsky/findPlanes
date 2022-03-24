@@ -106,6 +106,8 @@ public:
                                     std::string database, std::string fileName);
 
     static Point getMean(std::vector<Point> &points);
+
+    static cv::Mat build3DRotationMatrix(double roll, double pitch, double yaw = 0.0);
 };
 
 

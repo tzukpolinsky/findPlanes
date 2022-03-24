@@ -440,7 +440,42 @@ std::vector<double> Auxiliary::Get3dAnglesBetween2Points(const Point &point1, co
                     (sqrt(pow(point1.x, 2) + pow(point1.y, 2)) * sqrt(pow(point2.x, 2) + pow(point2.y, 2))));
     return {x, y, z};
 }
+cv::Mat Auxiliary::build3DRotationMatrix(double roll,double pitch,double yaw){
+    cv::Mat Rx(3,3,CV_64F);
+    Rx.at<double>(0,0) = 1;
+    Rx.at<double>(0,1) = 0;
+    Rx.at<double>(0,2) = 0;
+    Rx.at<double>(1,0) = 0;
+    Rx.at<double>(2,0) = 0;
+    Rx.at<double>(1,1) = std::cos(roll);
+    Rx.at<double>(1,2) = -std::sin(roll);
+    Rx.at<double>(2,1) = std::sin(roll);
+    Rx.at<double>(2,2) = std::cos(roll);
 
+    cv::Mat Ry(3,3,CV_64F);
+    Ry.at<double>(0,1) = 0;
+    Ry.at<double>(1,1) = 1;
+    Ry.at<double>(1,0) = 0;
+    Ry.at<double>(1,2) = 0;
+    Ry.at<double>(2,1) = 0;
+    Ry.at<double>(0,0) = std::cos(pitch);
+    Ry.at<double>(0,2) = std::sin(pitch);
+    Ry.at<double>(2,0) = -std::sin(pitch);
+    Ry.at<double>(2,2) = std::cos(pitch);
+
+    cv::Mat Rz(3,3,CV_64F);
+    Rz.at<double>(0,2) = 0;
+    Rz.at<double>(1,2) = 0;
+    Rz.at<double>(2,2) = 1;
+    Rz.at<double>(2,0) = 0;
+    Rz.at<double>(2,1) = 0;
+    Rz.at<double>(0,0) = std::cos(yaw);
+    Rz.at<double>(0,1) = -std::sin(yaw);
+    Rz.at<double>(1,0) = std::sin(yaw);
+    Rz.at<double>(1,1) = std::cos(yaw);
+    cv::Mat rotationMat = Rx*Ry*Rz;
+    return rotationMat;
+}
 std::vector<Point> Auxiliary::getPointsVector(cv::Mat points) {
     std::vector<Point> vec{};
     for (int i = 0; i < points.rows; i++)

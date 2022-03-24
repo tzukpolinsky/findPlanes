@@ -83,8 +83,9 @@ Navigation::objectDetection(std::vector<Point> &points, std::vector<Point> &trac
     return {};
 }
 
-std::vector<Point> InnerAlg(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
-                            std::string pangolinPostfix) {
+std::pair<long, std::vector<Point>>
+Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                 std::string pangolinPostfix) {
     std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
         return point1.z < point2.z;
     });
@@ -128,11 +129,11 @@ std::vector<Point> InnerAlg(std::vector<Point> &points, unsigned long sizeOfJump
                   return weightedPoint1.first > weightedPoint2.first;
               });
     auto bestPoints =
-            weightedPoints.front().second;//.size() > weightedPoints.back().second.size() ? weightedPoints.back().second: weightedPoints.front().second;
+            weightedPoints.front();//.size() > weightedPoints.back().second.size() ? weightedPoints.back().second: weightedPoints.front().second;
     if (isDebug) {
         Auxiliary::showGraph(pointsSizes, variances, "ro");
         Auxiliary::SetupPangolin("floor" + pangolinPostfix);
-        Auxiliary::DrawMapPointsPangolin(points, bestPoints, "floor" + pangolinPostfix);
+        Auxiliary::DrawMapPointsPangolin(points, bestPoints.second, "floor" + pangolinPostfix);
 
     }
 
@@ -141,14 +142,23 @@ std::vector<Point> InnerAlg(std::vector<Point> &points, unsigned long sizeOfJump
 }
 
 std::vector<Point>
-Navigation::findFloorAndAlign(std::vector<Point> points, std::vector<Point> floor, int heightDirection) {
+Navigation::alignByAngle(std::vector<Point> points, double roll, double pitch) {
+    cv::Mat pointsMat = Auxiliary::getPointsMatrix(points);
+    cv::Mat rotationMat = Auxiliary::build3DRotationMatrix(roll, pitch);
+    cv::Mat alignedPointsMatrix = rotationMat * pointsMat.t();
+    return Auxiliary::getPointsVector(alignedPointsMatrix.t());
+
+}
+
+std::vector<Point>
+Navigation::alignByFloor(std::vector<Point> points, std::vector<Point> floor, int heightDirection) {
     auto floorMean = Auxiliary::getMean(floor);
     for (auto &point: points) {
         point.x -= floorMean.x;
         point.y -= floorMean.y;
         point.z -= floorMean.z;
     }
-    for(auto &point : floor){
+    for (auto &point: floor) {
         point.x -= floorMean.x;
         point.y -= floorMean.y;
         point.z -= floorMean.z;
@@ -165,15 +175,43 @@ Navigation::findFloorAndAlign(std::vector<Point> points, std::vector<Point> floo
 
 }
 
-std::vector<Point> Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
-                                                    std::string pangolinPostfix) {
-    auto floor = InnerAlg(points, sizeOfJump, true, pangolinPostfix);
+std::vector<Point>
+Navigation::getFloorAndBruteForceAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                       std::string pangolinPostfix) {
+    long maxScore = std::numeric_limits<long>::min();
+    std::vector<Point> bestFloor;
+    std::vector<Point> bestCloud;
+    for (int i = 0; i <20 ; i+=2) {
+        for (int j = -10; j <= 10; j+=2) {
+            auto rotatedPoints = alignByAngle(points, Auxiliary::angleToRadians(j), Auxiliary::angleToRadians(i));
+            auto[score, floor] = getFloorByCovariance(rotatedPoints, sizeOfJump, false, pangolinPostfix);
+            if (score > maxScore) {
+                maxScore = score;
+                bestFloor = floor;
+                bestCloud = rotatedPoints;
+                std::cout << "new best floor for pitch: " << i << " and roll: " << j << std::endl;
+            }
+        }
+    }
+    /*auto rotatedPoints = alignByAngle(points, Auxiliary::angleToRadians(0), Auxiliary::angleToRadians(10));
+    auto[score, floor] = getFloorByCovariance(rotatedPoints, sizeOfJump, false, pangolinPostfix);
+    bestFloor = floor;
+    bestCloud = rotatedPoints;*/
+    Auxiliary::SetupPangolin("floor" + pangolinPostfix);
+    Auxiliary::DrawMapPointsPangolin(bestCloud, bestFloor, "floor" + pangolinPostfix);
+    return bestFloor;
+}
+
+std::vector<Point> Navigation::getFloorAndAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                                std::string pangolinPostfix) {
+    auto[score, floor] = getFloorByCovariance(points, sizeOfJump, true, pangolinPostfix);
     for (int i = 0; i < 10; ++i) {
-        auto NonFlipAlignedPoints = findFloorAndAlign(points, floor, 1);
-        auto NonFlipFloor = InnerAlg(NonFlipAlignedPoints, sizeOfJump, true, pangolinPostfix);;
-        auto FlipAlignedPoints = findFloorAndAlign(points, floor, -1);
-        auto FlipFloor = InnerAlg(FlipAlignedPoints, sizeOfJump, true, pangolinPostfix);;
-        if(NonFlipFloor.size() < FlipFloor.size()){
+        auto NonFlipAlignedPoints = alignByFloor(points, floor, 1);
+        auto[NonFlipScore, NonFlipFloor] = getFloorByCovariance(NonFlipAlignedPoints, sizeOfJump, true,
+                                                                pangolinPostfix);;
+        auto FlipAlignedPoints = alignByFloor(points, floor, -1);
+        auto[FlipScore, FlipFloor] = getFloorByCovariance(FlipAlignedPoints, sizeOfJump, true, pangolinPostfix);;
+        if (NonFlipFloor.size() < FlipFloor.size()) {
             std::cout << "non fliped floor was taken" << std::endl;
         }
         floor = NonFlipFloor.size() < FlipFloor.size() ? NonFlipFloor : FlipFloor;
