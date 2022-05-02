@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sstream>
+#include <cmath>
 
 class Point {
 public:
@@ -23,13 +24,18 @@ public:
      * q* is quaternion
      *
      * */
-    Point(double x, double y, double z, int lidarOriginalPosition=0,int lidarId = -1);
+    Point(double x, double y, double z, int lidarOriginalPosition=0,int lidarId = -1,bool isAlgoFloor = false,bool isGroundTruthFloor = false);
 
     bool operator==(const Point &ref) const {
+
         return this->x == ref.x && this->y == ref.y && this->z == ref.z;
     }
 
-
+    bool approximationEquality(const Point &ref,double approximation) const {
+        return std::ceil(this->x * approximation) / approximation == std::ceil(ref.x * approximation) / approximation
+               && std::ceil(this->y * approximation) / approximation == std::ceil(ref.y * approximation) / approximation
+               && std::ceil(this->z * approximation) / approximation == std::ceil(ref.z * approximation) / approximation;
+    }
     [[nodiscard]] std::string to_string() const {
         std::ostringstream ss;
         ss << this->x << "," << this->y << "," << this->z << "," << this->lidarId;
@@ -43,6 +49,9 @@ public:
     double z;
     int lidarId;
     int lidarOriginalPosition;
+    bool isAlgoFloor;
+    bool isGroundTruthFloor;
+
 };
 
 

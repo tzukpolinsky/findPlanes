@@ -83,71 +83,66 @@ Navigation::objectDetection(std::vector<Point> &points, std::vector<Point> &trac
     return {};
 }
 
-std::pair<long, std::vector<Point>>
-Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+void
+Navigation::getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump,
+                                 std::pair<long, std::vector<Point>> &scoreAndFloor, bool isDebug,
                                  std::string pangolinPostfix) {
-    std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
-        return point1.z < point2.z;
-    });
 
+    /*std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
+        return point1.z < point2.z;
+    });*/
     std::vector<double> z = Auxiliary::getZValues(points);
     std::vector<double> y = Auxiliary::getYValues(points);
     std::vector<double> x = Auxiliary::getXValues(points);
-
     std::vector<double> pointsSizes;
     std::vector<double> variances;
-    std::vector<std::pair<double, std::vector<Point>>> weightedPoints;
+    std::vector<std::pair<double, unsigned long>> weightedPoints;
+    double bestScore = std::numeric_limits<double>::min();
+    unsigned long bestSizeZ = 0;
     while (z.size() > sizeOfJump) {
         auto cov = Auxiliary::getCovarianceMat(x, y);
         auto trace = cov.at<double>(0, 0) + cov.at<double>(1, 1);
         auto det = cv::determinant(cov);
         double zVariance = Auxiliary::calculateVariance(z);
-        double zStd = std::sqrt(zVariance);
-        double xVariance = Auxiliary::calculateVariance(x);
-        double zMean = Auxiliary::calculateMean(z);
-        std::vector<double> highest(z.end() - sizeOfJump, z.end());
-        double outliers_garde = 0.0;
-        for (double currentZ: highest) {
-            outliers_garde += (currentZ - zMean) / zStd;
+        if (isDebug) {
+            variances.emplace_back(((det / trace) / (zVariance)));
+            pointsSizes.emplace_back(z.size());
         }
-
-//        outliers_garde = 1 / outliers_garde;
-//        variances.emplace_back(((det / trace) / outliers_garde) * z.size());
-        variances.emplace_back(((det / trace) / (zVariance * outliers_garde)));
-        pointsSizes.emplace_back(z.size());
-        weightedPoints.emplace_back(((det / trace) / (zVariance * outliers_garde)),
-                                    std::vector<Point>(points.begin(), points.begin() + z.size()));
+        double score = (det / trace) / (zVariance);
+        //weightedPoints.emplace_back(score, z.size());
+        if (bestScore < score){
+            bestScore = score;
+            bestSizeZ = z.size();
+        }
         z.resize(z.size() - sizeOfJump);
         x.resize(x.size() - sizeOfJump);
         y.resize(y.size() - sizeOfJump);
-
-
     }
-    std::sort(weightedPoints.begin(), weightedPoints.end(),
-              [](const std::pair<double, std::vector<Point>> &weightedPoint1,
-                 const std::pair<double, std::vector<Point>> &weightedPoint2) -> bool {
+    /*std::sort(weightedPoints.begin(), weightedPoints.end(),
+              [](const std::pair<double, long> &weightedPoint1,
+                 const std::pair<double, long> &weightedPoint2) -> bool {
                   return weightedPoint1.first > weightedPoint2.first;
-              });
-    auto bestPoints =
-            weightedPoints.front();//.size() > weightedPoints.back().second.size() ? weightedPoints.back().second: weightedPoints.front().second;
+              });*/
+
+    if (!isDebug) {
+        scoreAndFloor.first = bestScore;
+        scoreAndFloor.second = std::vector<Point>(points.begin(), points.begin() + bestSizeZ);
+        return;
+    }
+    /*auto bestPoints = std::pair<double, std::vector<Point>>{weightedPoints.front().first,
+                                                            std::vector<Point>(points.begin(), points.begin() +
+                                                                                               weightedPoints.front().second)};*/
+    scoreAndFloor.first = bestScore;
+    scoreAndFloor.second = std::vector<Point>(points.begin(), points.begin() + weightedPoints.front().second);
     if (isDebug) {
         Auxiliary::showGraph(pointsSizes, variances, "ro");
         Auxiliary::SetupPangolin("floor" + pangolinPostfix);
-        Auxiliary::DrawMapPointsPangolin(points, bestPoints.second, "floor" + pangolinPostfix);
+            Auxiliary::DrawMapPointsPangolin(points, scoreAndFloor.second , "floor" + pangolinPostfix);
 
     }
 
-
-    return bestPoints;
-}
-
-std::vector<Point>
-Navigation::alignByAngle(std::vector<Point> points, double roll, double pitch) {
-    cv::Mat pointsMat = Auxiliary::getPointsMatrix(points);
-    cv::Mat rotationMat = Auxiliary::build3DRotationMatrix(roll, pitch);
-    cv::Mat alignedPointsMatrix = rotationMat * pointsMat.t();
-    return Auxiliary::getPointsVector(alignedPointsMatrix.t());
-
+    return;
+    //return bestPoints;
 }
 
 std::vector<Point>
@@ -163,16 +158,106 @@ Navigation::alignByFloor(std::vector<Point> points, std::vector<Point> floor, in
         point.y -= floorMean.y;
         point.z -= floorMean.z;
     }
-    auto floorMat = Auxiliary::getPointsMatrix(floor);
-    auto pointsMat = Auxiliary::getPointsMatrix(points);
+    cv::Mat floorMat(points.size(), 3, CV_64F);
+    cv::Mat pointsMat(points.size(), 3, CV_64F);
+
+    Auxiliary::getPointsMatrix(floor, floorMat);
+    Auxiliary::getPointsMatrix(points, pointsMat);
     cv::PCA floorPca(floorMat, cv::Mat(), CV_PCA_DATA_AS_ROW, 0);
     cv::Mat changeOfBasis = floorPca.eigenvectors.inv();
     changeOfBasis.at<double>(0, 2) *= heightDirection;
     changeOfBasis.at<double>(1, 2) *= heightDirection;
     changeOfBasis.at<double>(2, 2) *= heightDirection;
     cv::Mat alignedPointsMatrix = changeOfBasis * pointsMat.t();
-    return Auxiliary::getPointsVector(alignedPointsMatrix.t());
+    std::vector<Point> result;
+    Auxiliary::getPointsVector(alignedPointsMatrix.t(),points, result);
+    return result;
 
+}
+
+void
+Navigation::alignByAngle(std::vector<Point> &points, double roll, double pitch, std::vector<Point> &rotatedPoints) {
+    cv::Mat pointsMat(points.size(), 3, CV_64F);
+    Auxiliary::getPointsMatrix(points, pointsMat);
+
+    cv::Mat rotationMat = Auxiliary::build3DRotationMatrix(roll, pitch);
+    cv::Mat alignedPointsMatrix = rotationMat * pointsMat.t();
+    Auxiliary::getPointsVector(alignedPointsMatrix.t(),points, rotatedPoints);
+}
+
+void Navigation::alignByAngleThread(std::vector<Point> &points, int roll, int pitch, int sizeOfJump,
+                                    std::pair<long, std::vector<Point>> &result, std::vector<Point> &rotatedPoints) {
+    alignByAngle(points, Auxiliary::angleToRadians(pitch),
+                 Auxiliary::angleToRadians(roll), rotatedPoints);
+    getFloorByCovariance(rotatedPoints, sizeOfJump, result, false);
+    //result.first = resultCurrent.first;
+    //result.second = resultCurrent.second;
+    result.first *= result.second.size();
+}
+
+std::vector<Point>
+Navigation::getFloorAndBruteForceAlignUsingThreads(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                                   std::string pangolinPostfix) {
+    long maxScore = std::numeric_limits<long>::min();
+    std::vector<Point> bestFloor;
+    std::vector<Point> bestCloud;
+    auto numberOfThreads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads(numberOfThreads);
+    std::vector<std::pair<long, std::vector<Point>>> results(numberOfThreads);
+    std::vector<std::vector<Point>> clouds(numberOfThreads);
+    int pitch;
+    int roll;
+    int startRoll = bestRoll == std::numeric_limits<int>::min() ? 0 : bestRoll - 2;
+    int endRoll = bestRoll == std::numeric_limits<int>::min() ? 20 : bestRoll + 2;
+    int startPitch = bestRoll == std::numeric_limits<int>::min() ? 0 : bestPitch - 2;
+    int endPitch = bestRoll == std::numeric_limits<int>::min() ? 20 : bestPitch + 2;
+    int currentThread = 0;
+    std::sort(points.begin(), points.end(), [](const Point &point1, const Point &point2) -> bool {
+        return point1.z < point2.z;
+    });
+    for (int rollAngle = startRoll; rollAngle < endRoll; rollAngle += 2) {
+        for (int pitchAngle = startPitch; pitchAngle <= endPitch; pitchAngle += 2) {
+            if (currentThread == numberOfThreads) {
+                for (int i = 0; i < numberOfThreads; ++i) {
+                    threads[i].join();
+                    if (results[i].first > maxScore) {
+                        maxScore = results[i].first;
+                        bestFloor = results[i].second;
+                        pitch = i - 10 + i * 2;
+                        roll = i * 2;
+                        bestCloud = clouds[i];
+                    }
+                }
+                currentThread = 0;
+            }
+            //results.push_back(std::make_pair<long,std::vector<Point>>(0, std::vector<Point>{points.size()}));
+            //clouds.emplace_back(std::vector<Point>(points.size()));
+            std::thread t(&Navigation::alignByAngleThread, this, std::ref(points), rollAngle, pitchAngle,
+                          sizeOfJump, std::ref(results[currentThread]), std::ref(clouds[currentThread]));
+            threads[currentThread++] = std::move(t);
+        }
+    }
+
+    for (int i = 0; i < numberOfThreads; ++i) {
+        if (threads[i].joinable()) {
+            threads[i].join();
+            if (results[i].first > maxScore) {
+                maxScore = results[i].first;
+                bestFloor = results[i].second;
+                pitch = i - 10 + i * 2;
+                roll = i * 2;
+                bestCloud = clouds[i];
+            }
+        }
+
+    }
+    bestRoll = roll;
+    bestPitch = pitch;
+    if (isDebug) {
+        Auxiliary::SetupPangolin("floor" + pangolinPostfix);
+        Auxiliary::DrawMapPointsPangolin(bestCloud, bestFloor, "floor" + pangolinPostfix);
+    }
+    return bestFloor;
 }
 
 std::vector<Point>
@@ -181,40 +266,76 @@ Navigation::getFloorAndBruteForceAlign(std::vector<Point> &points, unsigned long
     long maxScore = std::numeric_limits<long>::min();
     std::vector<Point> bestFloor;
     std::vector<Point> bestCloud;
-    for (int i = 0; i <20 ; i+=2) {
-        for (int j = -10; j <= 10; j+=2) {
-            auto rotatedPoints = alignByAngle(points, Auxiliary::angleToRadians(j), Auxiliary::angleToRadians(i));
-            auto[score, floor] = getFloorByCovariance(rotatedPoints, sizeOfJump, false, pangolinPostfix);
-            if (score > maxScore) {
-                maxScore = score;
-                bestFloor = floor;
-                bestCloud = rotatedPoints;
-                std::cout << "new best floor for pitch: " << i << " and roll: " << j << std::endl;
+    int pitch;
+    int roll;
+    if (bestRoll == std::numeric_limits<int>::min()) {
+        for (int rollAngle = 0; rollAngle < 20; rollAngle += 2) {
+            for (int pitchAngle = -10; pitchAngle <= 10; pitchAngle += 2) {
+                std::pair<long, std::vector<Point>> scoreAndFloor;
+                std::vector<Point> rotatedPoints;
+                alignByAngle(points, Auxiliary::angleToRadians(pitchAngle),
+                             Auxiliary::angleToRadians(rollAngle), rotatedPoints);
+                getFloorByCovariance(rotatedPoints, sizeOfJump, scoreAndFloor, false, pangolinPostfix);
+                scoreAndFloor.first *= scoreAndFloor.second.size();
+                if (scoreAndFloor.first > maxScore) {
+                    maxScore = scoreAndFloor.first;
+                    pitch = pitchAngle;
+                    roll = rollAngle;
+                    bestFloor = scoreAndFloor.second;
+                    bestCloud = rotatedPoints;
+                    std::cout << "new best floor for pitch: " << rollAngle << " and roll: " << pitchAngle << std::endl;
+                }
+            }
+        }
+    } else {
+        for (int rollAngle = bestRoll - 2; rollAngle < bestRoll + 2; rollAngle += 2) {
+            for (int pitchAngle = bestPitch - 2; pitchAngle < bestPitch + 2; pitchAngle += 2) {
+                std::pair<long, std::vector<Point>> scoreAndFloor;
+                std::vector<Point> rotatedPoints;
+                alignByAngle(points, Auxiliary::angleToRadians(pitchAngle),
+                             Auxiliary::angleToRadians(rollAngle), rotatedPoints);
+                getFloorByCovariance(rotatedPoints, sizeOfJump, scoreAndFloor, false, pangolinPostfix);
+                scoreAndFloor.first *= scoreAndFloor.second.size();
+                if (scoreAndFloor.first > maxScore) {
+                    maxScore = scoreAndFloor.first;
+                    bestFloor = scoreAndFloor.second;
+                    pitch = pitchAngle;
+                    roll = rollAngle;
+                    bestCloud = rotatedPoints;
+                    std::cout << "new best floor for pitch: " << rollAngle << " and roll: " << pitchAngle << std::endl;
+                }
             }
         }
     }
-    /*auto rotatedPoints = alignByAngle(points, Auxiliary::angleToRadians(0), Auxiliary::angleToRadians(10));
-    auto[score, floor] = getFloorByCovariance(rotatedPoints, sizeOfJump, false, pangolinPostfix);
-    bestFloor = floor;
-    bestCloud = rotatedPoints;*/
-    Auxiliary::SetupPangolin("floor" + pangolinPostfix);
-    Auxiliary::DrawMapPointsPangolin(bestCloud, bestFloor, "floor" + pangolinPostfix);
+    bestRoll = roll;
+    bestPitch = pitch;
+    if (isDebug) {
+        Auxiliary::SetupPangolin("floor" + pangolinPostfix);
+        Auxiliary::DrawMapPointsPangolin(bestCloud, bestFloor, "floor" + pangolinPostfix);
+    }
     return bestFloor;
 }
 
 std::vector<Point> Navigation::getFloorAndAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
                                                 std::string pangolinPostfix) {
-    auto[score, floor] = getFloorByCovariance(points, sizeOfJump, true, pangolinPostfix);
+    std::pair<long, std::vector<Point>> scoreAndFloor;
+    std::vector<Point> floor;
+    getFloorByCovariance(points, sizeOfJump, scoreAndFloor, true, pangolinPostfix);
     for (int i = 0; i < 10; ++i) {
-        auto NonFlipAlignedPoints = alignByFloor(points, floor, 1);
-        auto[NonFlipScore, NonFlipFloor] = getFloorByCovariance(NonFlipAlignedPoints, sizeOfJump, true,
-                                                                pangolinPostfix);;
-        auto FlipAlignedPoints = alignByFloor(points, floor, -1);
-        auto[FlipScore, FlipFloor] = getFloorByCovariance(FlipAlignedPoints, sizeOfJump, true, pangolinPostfix);;
-        if (NonFlipFloor.size() < FlipFloor.size()) {
+        std::pair<long, std::vector<Point>> currentScoreAndFloorNonFlip;
+        std::pair<long, std::vector<Point>> currentScoreAndFloorFlip;
+
+        auto NonFlipAlignedPoints = alignByFloor(points, scoreAndFloor.second, 1);
+        getFloorByCovariance(NonFlipAlignedPoints, sizeOfJump, currentScoreAndFloorNonFlip, true,
+                             pangolinPostfix);;
+        auto FlipAlignedPoints = alignByFloor(points, scoreAndFloor.second, -1);
+        getFloorByCovariance(FlipAlignedPoints, sizeOfJump, currentScoreAndFloorFlip, true, pangolinPostfix);;
+        if (currentScoreAndFloorNonFlip.second.size() < currentScoreAndFloorFlip.second.size()) {
             std::cout << "non fliped floor was taken" << std::endl;
         }
-        floor = NonFlipFloor.size() < FlipFloor.size() ? NonFlipFloor : FlipFloor;
+        floor = currentScoreAndFloorNonFlip.second.size() < currentScoreAndFloorFlip.second.size()
+                ? currentScoreAndFloorNonFlip.second
+                : currentScoreAndFloorFlip.second;
     }
     return floor;
 }

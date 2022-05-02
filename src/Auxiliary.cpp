@@ -75,15 +75,20 @@ void Auxiliary::exportToXYZFile(const std::vector<Point> &points, std::string fi
 }
 
 void Auxiliary::displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath, std::string dir,
-                                    std::string database, std::string fileName) {
+                                    std::string database, std::string fileName, bool isDebug, std::string saveImgPath) {
     auto rows = getRowsIndicesFromPYZFile(npzFilePath);
     auto cols = getColsIndicesFromPYZFile(npzFilePath);
+    auto originalPoints = getPointsFromPYZFile(npzFilePath);
     std::string imagePath = dir + "/camera";
-    std::string cameraLocation = database.substr(4);
+    std::string labelPath = dir + "/label";
+    auto index = database.find("cam_");
+    std::string cameraLocation = database.substr(index, database.size() - index);
+    std::string currentCameraLocation;
     for (auto &cameraDir: std::filesystem::directory_iterator(imagePath)) {
-        std::string currentCameraLocation = cameraDir.path().filename().string().substr(4);
+        currentCameraLocation = cameraDir.path().filename().string();
         if (cameraLocation == currentCameraLocation) {
             imagePath += "/" + cameraDir.path().filename().string();
+            labelPath += "/" + cameraDir.path().filename().string();
             break;
         }
     }
@@ -91,7 +96,12 @@ void Auxiliary::displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::st
             "/" + fileName.substr(0, 15) + "camera" +
             fileName.substr(20, fileName.size() - 24) +
             ".png";
+    labelPath +=
+            "/" + fileName.substr(0, 15) + "label" +
+            fileName.substr(20, fileName.size() - 24) +
+            ".png";
     cv::Mat image = cv::imread(imagePath);
+    cv::Mat labelImage = cv::imread(labelPath);
     int pixelSize = 3;
     int pixel_rowoffs = 2;
     int pixel_coloffs = 2;
@@ -102,14 +112,32 @@ void Auxiliary::displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::st
         auto row = std::clamp(int(rows[lidarPos]), 0, canvas_rows);
         auto col = std::clamp(int(cols[lidarPos]), 0, canvas_cols);
         image.at<cv::Vec3b>(row + pixel_coloffs, col + pixel_coloffs) = cv::Vec3b(0, 0, 255);
-        /*image.at<cv::Vec3b>(row , col ) = cv::Vec3b(255, 0, 0);
-        image.at<cv::Vec3b>(row + 1, col + 1) = cv::Vec3b(255, 0, 0);
-        image.at<cv::Vec3b>(row -1, col -1) = cv::Vec3b(255, 0, 0);
-        image.at<cv::Vec3b>(row -2, col -2) = cv::Vec3b(255, 0, 0);*/
+        auto color = labelImage.at<cv::Vec3b>(row + pixel_coloffs, col + pixel_coloffs);
+        cv::circle(image, cv::Point(col + pixel_coloffs, row + pixel_rowoffs), pixelSize, cv::Scalar(0, 0, 255), 1);
+        if ((color[0] == 255 && color[1] == 0 && color[2] == 255) ||
+            (color[0] == 200 && color[1] == 150 && color[2] == 180)
+            || (color[0] == 150 && color[1] == 0 && color[2] == 150)
+            || (color[0] == 180 && color[1] == 50 && color[2] == 180)
+            || (color[0] == 255 && color[1] == 0 && color[2] == 128)
+            || (color[0] == 255 && color[1] == 0 && color[2] == 167)
+            || (color[0] == 37 && color[1] == 193 && color[2] == 255)
+            || (color[0] == 0 && color[1] == 128 && color[2] == 128)
+            || (color[0] == 83 && color[1] == 114 && color[2] == 212)
+            || (color[0] == 255 && color[1] == 0 && color[2] == 224)) {
+            cv::circle(image, cv::Point(col + pixel_coloffs, row + pixel_rowoffs), pixelSize, cv::Scalar(0, 255, 0),
+                       1);
+            i.isGroundTruthFloor = true;
+        }
     }
-    //cv::resize(image,image,cv::Size(640,480));
-    cv::imshow("lidarPoints", image);
-    cv::waitKey(0);
+    if (isDebug) {
+        cv::resize(image, image, cv::Size(640, 480));
+        cv::imshow("lidarPoints", image);
+        cv::waitKey(0);
+    }
+    cv::imwrite(saveImgPath + "/" + fileName.substr(0, 15) + "result" +
+                fileName.substr(20, fileName.size() - 24) +
+                ".png", image);
+cv::destroyAllWindows();
 }
 
 void Auxiliary::SetupPangolin(const std::string &window_name) {
@@ -381,17 +409,15 @@ std::vector<Point> Auxiliary::getAveragedPointsSet(std::vector<Point> &points) {
     return newPoints;
 }
 
-cv::Mat Auxiliary::getPointsMatrix(std::vector<Point> &points) {
+void Auxiliary::getPointsMatrix(std::vector<Point> &points, cv::Mat &out) {
 
-    cv::Mat mat(points.size(), 3, CV_64F);
 
     for (int i = 0; i < points.size(); ++i) {
         auto point = points[i];
-        mat.at<double>(i, 0) = point.x;
-        mat.at<double>(i, 1) = point.y;
-        mat.at<double>(i, 2) = point.z;
+        out.at<double>(i, 0) = point.x;
+        out.at<double>(i, 1) = point.y;
+        out.at<double>(i, 2) = point.z;
     }
-    return mat;
 }
 
 
@@ -440,45 +466,47 @@ std::vector<double> Auxiliary::Get3dAnglesBetween2Points(const Point &point1, co
                     (sqrt(pow(point1.x, 2) + pow(point1.y, 2)) * sqrt(pow(point2.x, 2) + pow(point2.y, 2))));
     return {x, y, z};
 }
-cv::Mat Auxiliary::build3DRotationMatrix(double roll,double pitch,double yaw){
-    cv::Mat Rx(3,3,CV_64F);
-    Rx.at<double>(0,0) = 1;
-    Rx.at<double>(0,1) = 0;
-    Rx.at<double>(0,2) = 0;
-    Rx.at<double>(1,0) = 0;
-    Rx.at<double>(2,0) = 0;
-    Rx.at<double>(1,1) = std::cos(roll);
-    Rx.at<double>(1,2) = -std::sin(roll);
-    Rx.at<double>(2,1) = std::sin(roll);
-    Rx.at<double>(2,2) = std::cos(roll);
 
-    cv::Mat Ry(3,3,CV_64F);
-    Ry.at<double>(0,1) = 0;
-    Ry.at<double>(1,1) = 1;
-    Ry.at<double>(1,0) = 0;
-    Ry.at<double>(1,2) = 0;
-    Ry.at<double>(2,1) = 0;
-    Ry.at<double>(0,0) = std::cos(pitch);
-    Ry.at<double>(0,2) = std::sin(pitch);
-    Ry.at<double>(2,0) = -std::sin(pitch);
-    Ry.at<double>(2,2) = std::cos(pitch);
+cv::Mat Auxiliary::build3DRotationMatrix(double roll, double pitch, double yaw) {
+    cv::Mat Rx(3, 3, CV_64F);
+    Rx.at<double>(0, 0) = 1;
+    Rx.at<double>(0, 1) = 0;
+    Rx.at<double>(0, 2) = 0;
+    Rx.at<double>(1, 0) = 0;
+    Rx.at<double>(2, 0) = 0;
+    Rx.at<double>(1, 1) = std::cos(roll);
+    Rx.at<double>(1, 2) = -std::sin(roll);
+    Rx.at<double>(2, 1) = std::sin(roll);
+    Rx.at<double>(2, 2) = std::cos(roll);
 
-    cv::Mat Rz(3,3,CV_64F);
-    Rz.at<double>(0,2) = 0;
-    Rz.at<double>(1,2) = 0;
-    Rz.at<double>(2,2) = 1;
-    Rz.at<double>(2,0) = 0;
-    Rz.at<double>(2,1) = 0;
-    Rz.at<double>(0,0) = std::cos(yaw);
-    Rz.at<double>(0,1) = -std::sin(yaw);
-    Rz.at<double>(1,0) = std::sin(yaw);
-    Rz.at<double>(1,1) = std::cos(yaw);
-    cv::Mat rotationMat = Rx*Ry*Rz;
+    cv::Mat Ry(3, 3, CV_64F);
+    Ry.at<double>(0, 1) = 0;
+    Ry.at<double>(1, 1) = 1;
+    Ry.at<double>(1, 0) = 0;
+    Ry.at<double>(1, 2) = 0;
+    Ry.at<double>(2, 1) = 0;
+    Ry.at<double>(0, 0) = std::cos(pitch);
+    Ry.at<double>(0, 2) = std::sin(pitch);
+    Ry.at<double>(2, 0) = -std::sin(pitch);
+    Ry.at<double>(2, 2) = std::cos(pitch);
+
+    cv::Mat Rz(3, 3, CV_64F);
+    Rz.at<double>(0, 2) = 0;
+    Rz.at<double>(1, 2) = 0;
+    Rz.at<double>(2, 2) = 1;
+    Rz.at<double>(2, 0) = 0;
+    Rz.at<double>(2, 1) = 0;
+    Rz.at<double>(0, 0) = std::cos(yaw);
+    Rz.at<double>(0, 1) = -std::sin(yaw);
+    Rz.at<double>(1, 0) = std::sin(yaw);
+    Rz.at<double>(1, 1) = std::cos(yaw);
+    cv::Mat rotationMat = Rx * Ry * Rz;
     return rotationMat;
 }
-std::vector<Point> Auxiliary::getPointsVector(cv::Mat points) {
-    std::vector<Point> vec{};
+
+void Auxiliary::getPointsVector(cv::Mat points, std::vector<Point> &originalPoints, std::vector<Point> &out) {
+
     for (int i = 0; i < points.rows; i++)
-        vec.emplace_back(points.at<double>(i, 0), points.at<double>(i, 1), points.at<double>(i, 2));
-    return vec;
+        out.emplace_back(points.at<double>(i, 0), points.at<double>(i, 1), points.at<double>(i, 2),
+                         originalPoints[i].lidarOriginalPosition);
 }

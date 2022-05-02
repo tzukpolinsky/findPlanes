@@ -98,12 +98,12 @@ public:
 
     static cv::Mat getCovarianceMat3D(std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
 
-    static cv::Mat getPointsMatrix(std::vector<Point> &points);
+    static void getPointsMatrix(std::vector<Point> &points, cv::Mat &out);
 
-    static std::vector<Point> getPointsVector(cv::Mat points);
+    static void getPointsVector(cv::Mat points, std::vector<Point> &originalPoints, std::vector<Point> &out);
 
     static void displayLidarOnImage(std::vector<Point> &pointsToDisplay, std::string npzFilePath, std::string dir,
-                                    std::string database, std::string fileName);
+                                    std::string database, std::string fileName, bool isDebug,std::string saveImgPath);
 
     static Point getMean(std::vector<Point> &points);
 

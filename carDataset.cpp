@@ -65,7 +65,7 @@ cv::Mat convertPointToCVMat(const Point &point) {
 }
 
 std::pair<cv::Mat, cv::Mat> align_map(std::vector<Point> &points) {
-    auto[R_align, mu_align] = calculateAlignMatrices(convertToCvPoints(points));
+    auto [R_align, mu_align] = calculateAlignMatrices(convertToCvPoints(points));
 
     for (auto &point: points) {
         auto pnt3d = convertPointToCVMat(point);
@@ -81,34 +81,79 @@ std::pair<cv::Mat, cv::Mat> align_map(std::vector<Point> &points) {
 
 
 int loopThroughCarsDataBase(std::string &dataBasePath) {
-    Navigation navigation;
-    int i = 0;
-    bool isDebug = true;
+    bool isDebug = false;
+    char time_buf[21];
+    time_t time_tNow;
+    std::time(&time_tNow);
+    std::strftime(time_buf, 21, "%Y-%m-%d_%H:%S:%MZ", gmtime(&time_tNow));
+    std::string currentTime(time_buf);
+    std::ofstream data;
+    std::string dataPath = "/home/tzuk/Documents/carsDatasets/data/" + currentTime;
+    std::filesystem::create_directory(dataPath);
+
     for (auto &dir: std::filesystem::directory_iterator(dataBasePath)) {
         //if (i++ > 5) {
+
         if (std::filesystem::is_directory(dir.path().string() + "/lidar")) {
+
             for (auto &database: std::filesystem::directory_iterator(dir.path().string() + "/lidar")) {
-                for (auto &npzFile: std::filesystem::directory_iterator(database)) {
-                    std::string fileName = npzFile.path().filename().string();
-                    if (fileName.find("side") != std::string::npos) {
-                        auto points = Auxiliary::getPointsFromPYZFile(npzFile.path().string());
-                        std::cout << "amount of points: " << points.size() << " for file: " << fileName
-                                  << std::endl;
-                        auto start = std::chrono::high_resolution_clock::now();
-                        auto floor = navigation.getFloorAndBruteForceAlign(points, 100, !isDebug, fileName);
-                        /*if (isDebug) {
-                            Auxiliary::displayLidarOnImage(floor,npzFile.path().string(),dir.path().string(),database.path().string(),fileName);
-                        }*/
-                        auto stop = std::chrono::high_resolution_clock::now();
-                        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-                        std::cout << "for file: " << fileName << "time : " << duration.count() / 1000 << std::endl;
+                Navigation navigation;
+                dataPath = "/home/tzuk/Documents/carsDatasets/data/" + currentTime;
+                dataPath += "/"+dir.path().string().substr(dir.path().string().size() -15 );
+                std::filesystem::create_directory(dataPath);
+                dataPath += "/"+database.path().string().substr(dir.path().string().size()+7);
+                std::filesystem::create_directory(dataPath);
+                data.open(dataPath + "/data.txt");
+                std::vector<std::filesystem::path> files_in_directory;
+                std::copy(std::filesystem::directory_iterator(database), std::filesystem::directory_iterator(),
+                          std::back_inserter(files_in_directory));
+                std::sort(files_in_directory.begin(), files_in_directory.end());
+                for (auto &npzFile: files_in_directory) {
+                    std::string fileName = npzFile.filename().string();
+                    //if (fileName.find("center") != std::string::npos) {
+                    auto points = Auxiliary::getPointsFromPYZFile(npzFile.string());
+                    std::cout << "amount of points: " << points.size() << " for file: " << fileName
+                              << std::endl;
+                    auto start = std::chrono::high_resolution_clock::now();
+                    auto floor = navigation.getFloorAndBruteForceAlignUsingThreads(points, points.size() / 100,
+                                                                                   isDebug, fileName);
+                    auto stop = std::chrono::high_resolution_clock::now();
+                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+                    start = std::chrono::high_resolution_clock::now();
+                    std::pair<long, std::vector<Point>> result;
+                    std::vector<Point> rotatedPoints;
+                    navigation.alignByAngleThread(points, navigation.bestRoll, navigation.bestPitch,
+                                                  points.size() / 100,
+                                                  result, rotatedPoints);
+                    stop = std::chrono::high_resolution_clock::now();
+                    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+                    std::cout << "for file: " << fileName << " time in micro seconds: " << duration.count()
+                              << std::endl;
+                    data << "for file: " << fileName << " time in micro seconds: " << duration.count()
+                         << " amount of points: " << points.size() <<
+                         " points in floor: " << result.second.size() << std::endl;
+                    Auxiliary::displayLidarOnImage(result.second, npzFile.string(), dir.path().string(),
+                                                   database.path().string(), fileName, isDebug, dataPath);
+                    int amountOfTrueTrue = 0;
+                    int amountOfFalseFalse = 0;
+                    for (auto &point: result.second) {
+                        point.isAlgoFloor = true;
+                        amountOfFalseFalse += !point.isGroundTruthFloor;
+                        amountOfTrueTrue += point.isAlgoFloor && point.isGroundTruthFloor;
                     }
+                    data << "true true: " << amountOfTrueTrue << std::endl;
+                    data << "false false: " << points.size() - result.second.size() << std::endl;
+                    data << "wrong result: " << amountOfFalseFalse
+                         << std::endl;
+                    //}
                 }
+                data.close();
             }
         }
         //}
 
     }
+    data.close();
     return 1;
 }
 

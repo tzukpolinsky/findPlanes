@@ -11,6 +11,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <thread>
 
 class Navigation {
 public:
@@ -18,8 +19,8 @@ public:
     std::vector<Point> getFloorFromLidar(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug = false,
                                          std::string pangolinPostfix = "");
 
-    std::pair<long,std::vector<Point>> getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump,
-                                            bool isDebug = false, std::string pangolinPostfix = "");
+    void getFloorByCovariance(std::vector<Point> &points, unsigned long sizeOfJump,std::pair<long, std::vector<Point>> &scoreAndFloor,
+                                                             bool isDebug = false, std::string pangolinPostfix = "");
 
     std::vector<Point>
     alignByFloor(std::vector<Point> points, std::vector<Point> floor, int heightDirection);
@@ -31,13 +32,23 @@ public:
     std::vector<bool>
     objectDetection(std::vector<Point> &points, std::vector<Point> &track, Point &currentPosition);
 
-    std::vector<Point> alignByAngle(std::vector<Point> points, double roll, double pitch);
+    void alignByAngle(std::vector<Point> &points, double roll, double pitch,std::vector<Point> &rotatedPoints);
 
     std::vector<Point>
     getFloorAndAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug, std::string pangolinPostfix);
 
+    std::vector<Point>
+    getFloorAndBruteForceAlignUsingThreads(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
+                                           std::string pangolinPostfix);
+
     std::vector<Point> getFloorAndBruteForceAlign(std::vector<Point> &points, unsigned long sizeOfJump, bool isDebug,
                                                   std::string pangolinPostfix);
+
+    int bestPitch = std::numeric_limits<int>::min();
+    int bestRoll = std::numeric_limits<int>::min();
+
+    void alignByAngleThread(std::vector<Point> &points, int roll, int pitch, int sizeOfJump,
+                            std::pair<long, std::vector<Point>> &result, std::vector<Point> &rotatedPoints);
 };
 
 
